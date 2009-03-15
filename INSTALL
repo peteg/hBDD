@@ -1,0 +1,182 @@
+A Haskell Binding to some BDD Libraries.		-*- Outline -*-
+----------------------------------------
+
+* Prerequisites
+
+HBDD has been developed and tested using GHC 6.2.2 and 6.4 on Debian
+GNU/Linux and GHC 6.4 on Mac OS X 10.4. The more recent GHC 6.4 uses a new
+package / library management system (Cabal) which required some substantial
+changes to HBDD, and so may not be completely stable.
+
+	http://haskell.org/ghc/
+
+I haven't tried this under NHC or Hugs; it's probably not too far off
+working, though. Well, apart from NHC having trouble with MPTCs, of
+course...
+
+You may also wish to compile and install the Long/CMU BDD package:
+
+	http://www-2.cs.cmu.edu/~modelcheck/bdd.html
+
+or BuDDy:
+
+	http://vlsicad.eecs.umich.edu/BK/Slots/cache/www.itu.dk/research/buddy/
+	http://buddy.sourceforge.net/
+
+CUDD is included with HBDD:
+
+	http://vlsi.colorado.edu/~fabio/
+
+and is recommended.
+
+See below for information on the different BDD packages (including CUDD!).
+
+If you want to hack this library, it's convenient to have a copy of c2hs:
+
+	http://www.cse.unsw.edu.au/~chak/haskell/c2hs/
+
+and haddock:
+
+	http://haskell.org/haddock/
+
+To hack the build system, you'll need a recent autoconf (2.54 or later
+should be fine; earlier versions probably not).
+
+If you find you need these packages to simply build HBDD, this is a
+bug. Please notify us and we will fix it.
+
+* Simple install procedure
+
+After installing a BDD package (see below):
+
+   % cd <working directory>
+   % gunzip <package.tar.gz>
+   % tar xf package.tar
+   % cd <package>
+   % ./configure --with-<buddy|cudd|longbdd>=<bdd lib location> --prefix=<install location>
+   % make install
+
+Note that if you have installed BuDDy or the CMU/Long BDD package in your
+home directory, or just wish to use CUDD, you can simply say:
+
+   % ./configure
+
+and things should be found. You'll probably want to use the '--prefix'
+option in this case, though. Read through 'config.log' for clues as to what
+went wrong if the library is installed but not found.
+
+Please read:
+
+   % ./configure --help
+
+for other options, most of which are standard or self-explanatory.
+
+After installation HBDD relies on the originally installed BuDDy and
+CMU/Long libraries - these cannot be moved or deleted. The CUDD libraries
+are installed in the HBDD library directory, so you can simply delete the
+entire HBDD source tree after installation if you are using that package.
+
+* BuDDy
+
+If you use the latest BuDDy (version 2.4 from Sourceforge), then use a
+configure line similar to:
+
+  % ./configure --enable-shared=no
+
+This library does not have great dynamic variable allocation support (it
+appears to assume you will allocate all variables at the start, cf the other
+packages) and so runs fairly poorly.
+
+* The CUDD BDD Package
+
+CUDD lacks an install target and a configure script, and so needs to be
+setup by hand for your particular system. Examine:
+
+	<hbdd toplevel>/cudd-2.4.1/Makefile
+
+and adjust the compiler flags for your system. The defaults work fine on
+Debian GNU/Linux x86 for me.
+
+You can use an alternative version or installation of the library:
+
+   % ./configure --with-cudd=<src location> ...
+
+HBDD will build CUDD as part of building the cudd directory. In other words,
+after adjusting the Makefile you should be able to just "make" and "make
+install".
+
+* The CMU/Long BDD Package
+
+To install it, just build and install the contents of the "mem" and "bdd"
+subdirectories - HBDD does not require the other things.
+
+* Building from CVS
+
+  % cd <path>/hbdd
+  % autoconf
+  % tar xfzv <path>cudd-2.4.1.tar.gz
+
+...and then follow the instructions for building from .tar.gz
+
+* Mac OS X issues
+
+** BuDDy
+
+You'll need to run ranlib(1) over the installed library:
+
+% ranlib ~/lib/libbdd.a
+
+** The CUDD BDD Package
+
+You'll need to change the Makefile. In particular, OS X apparently doesn't
+support the timing functions so you'll need to remove the "-DBSD" option.
+
+** CMU/Long library
+
+For some reason $HOSTTYPE is not set when installing this library. A
+solution is to manually move the libraries to the place they would be on
+other systems:
+
+% mkdir ~/lib/powerpc/
+% mv ~/lib/libbdd.a ~/lib/libmem.a ~/lib/powerpc/
+
+(NOTE: adjust paths as appropriate).
+
+Note BuDDy also uses the filename "libbdd.a" and places it in ${prefix}/lib
+by default. The approach outlined here will allow you to use both libraries.
+
+** GHC 6.4 and GCC 4.0 (on Tiger, Mac OS X 10.4)
+
+There is an issue with these versions of the compilers. I excerpt the
+following from a README for Pugs 6.2.10 (and thank the Pugs hackers
+enormously for the tip):
+
+Perl6-Pugs-6.2.10.readme:
+
+CAVEATS FOR GCC 4.0 USERS
+-------------------------
+
+Mac OS X 10.4 "Tiger" users may see this error message when compiling Pugs:
+
+    ___DISCARD__
+    collect2: ld returned 1 exit status
+
+Until GHC 6.4.1 is released, you need to need to issue this command first:
+
+    sudo gcc_select 3.3
+
+Then recompiling Pugs using a clean tree.  Other users of GCC 4.0 systems
+may also need to switch to use GCC 3.3 to compile Pugs at this moment.
+
+Note that objects compiled with GCC 4.0 can't be linked with GCC 3.3 objects.
+This means that if you're embedding a Parrot you've built with GCC 4.0, Pugs
+will fail during linking with errors like:
+
+    ld: Undefined symbols:
+    _fprintf$LDBLStub
+    _sprintf$LDBLStub
+    _vfprintf$LDBLStub
+    _snprintf$LDBLStub
+    _printf$LDBLStub
+
+Try building a new Parrot with gcc 3.3, then compile Pugs again.

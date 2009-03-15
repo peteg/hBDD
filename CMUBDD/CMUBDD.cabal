@@ -1,0 +1,22 @@
+Name: CMUBDD
+Version: 0.1.0
+Cabal-version: >= 1.2
+Build-type: Simple
+Copyright: (C) [2002..2005], 2009 University of New South Wales
+Maintainer: peteg42@gmail.com
+Author: Peter Gammie
+License: LGPL
+Synopsis: An FFI binding to CMU/Long's BDD library
+Description:
+
+ HBDD provides a high-level API to the CUDD and CMU/Long Boolean Decision
+ Diagram libraries; this is the CMU/Long part of it.
+
+Library
+  build-Tools: c2hs
+  build-depends: base, containers, hbdd == 0.1.0, unix
+  extensions: ForeignFunctionInterface TypeFamilies
+  exposed-modules: Data.Boolean.CMUBDD
+  includes: bdduser.h, memuser.h
+  ghc-options: -Wall
+  extra-libraries: bdd, mem

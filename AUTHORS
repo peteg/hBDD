@@ -1,0 +1,13 @@
+Peter Gammie <peteg42 at gmail dot com>
+
+Contributions by:
+Jeremy Lee
+Kai Baukus
+
+Thanks to Manuel M. T. Chakravarty <http://www.cse.unsw.edu.au/~chak/> for
+help with the FFI and c2hs.
+
+Some of this work was undertaken as part of the "Model Checking
+Knowledge" project:
+
+http://www.cse.unsw.edu.au/~mck/

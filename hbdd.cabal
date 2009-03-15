@@ -1,0 +1,20 @@
+Name: hbdd
+Version: 0.1.0
+Cabal-version: >= 1.2
+Build-type: Simple
+Copyright: (C) [2002..2005], 2009 University of New South Wales
+Maintainer: peteg42@gmail.com
+Author: Peter Gammie
+License: LGPL
+License-file: COPYING.LIB
+Synopsis: An FFI binding to the CUDD and CMU BDD libraries
+Description:
+
+ HBDD provides a high-level API to the CUDD and CMU Boolean Decision
+ Diagram libraries.
+
+Library
+  Build-depends: base
+  extensions: TypeFamilies TypeSynonymInstances
+  exposed-modules: Data.Boolean, Data.Boolean.Relation
+  ghc-options: -Wall

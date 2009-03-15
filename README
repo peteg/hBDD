@@ -1,0 +1,256 @@
+A Haskell Binding to Long's BDD Library.			-*- Outline -*-
+----------------------------------------
+
+This library allows the convenient use of several BDD packages in
+Haskell. The intention is to furnish most useful Boolean operations with a
+purely functional interface, while still allowing access to the operational
+features (like variable re-ordering) via the IO monad.
+
+* Installing
+
+See the file `INSTALL'.
+
+** Using the library
+
+After installing the library, the program <install location>/bin/hbdd-config
+can be used to add the flags GHC needs to find it. For example:
+
+  % ghc Program.hs `hbdd-config --cudd-libs`
+
+* Documentation
+
+Haddock-generated documentation for the Haskell bindings can be found in the
+'doc' directory. CMU/Long's manpage - bdd(3) - is also a source of valuable
+information. BuDDy's documentation is a bit buggy, so it is perhaps worth
+reading the header files instead. CUDD's implementation is quite readable.
+
+* Copyleft
+
+This library is free software; you can redistribute it and/or modify it
+under the terms of the GNU Library General Public License as published by
+the Free Software Foundation; either version 2 of the License, or (at your
+option) any later version.
+
+This library is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
+License for more details.
+
+You should have received a copy of the GNU Library General Public License
+along with this library; if not, write to the Free Software Foundation,
+Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307 USA.
+
+** Notes
+
+As most of the build system was shamelessly borrowed from Manuel
+Chakravarty's c2hs system, there are some files that are GPL'ed, *not*
+LGPL'ed. You can identify these files by the copyright notices at the top of
+them.
+
+** The BuDDy Package License
+
+BuDDy has the following licence:
+
+               Copyright (C) 1996-2002 by Jorn Lind-Nielsen
+                            All rights reserved
+
+    Permission is hereby granted, without written agreement and without
+    license or royalty fees, to use, reproduce, prepare derivative
+    works, distribute, and display this software and its documentation
+    for any purpose, provided that (1) the above copyright notice and
+    the following two paragraphs appear in all copies of the source code
+    and (2) redistributions, including without limitation binaries,
+    reproduce these notices in the supporting documentation. Substantial
+    modifications to this software may be copyrighted by their authors
+    and need not follow the licensing terms described here, provided
+    that the new terms are clearly indicated in all files where they apply.
+
+    IN NO EVENT SHALL JORN LIND-NIELSEN, OR DISTRIBUTORS OF THIS
+    SOFTWARE BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
+    INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OF THIS
+    SOFTWARE AND ITS DOCUMENTATION, EVEN IF THE AUTHORS OR ANY OF THE
+    ABOVE PARTIES HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+    JORN LIND-NIELSEN SPECIFICALLY DISCLAIM ANY WARRANTIES, INCLUDING,
+    BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+    FITNESS FOR A PARTICULAR PURPOSE. THE SOFTWARE PROVIDED HEREUNDER IS
+    ON AN "AS IS" BASIS, AND THE AUTHORS AND DISTRIBUTORS HAVE NO
+    OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
+    MODIFICATIONS.
+
+** The CUDD BDD Package
+
+CUDD has the following licence:
+
+  Copyright (c) 1995-2004, Regents of the University of Colorado
+
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+
+  Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+
+  Neither the name of the University of Colorado nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+
+** The CMU/Long BDD Package
+
+Take careful note of the licence on this library:
+
+http://www-2.cs.cmu.edu/~modelcheck/license.htm
+
+  We understand that the programs SMV, CSML, LTD, SMC and MCB ("the
+  software") are supplied with no warranty. We agree that neither you nor
+  Carnegie Mellon will be held responsible for the correctness of programs
+  or circuits verified using the software.
+
+  The code of the software will not be transferred outside of our
+  institution without your permission and will be used only for research
+  purposes. In particular, we agree that the code will not be included as
+  part of any commercial software package or product of this
+  institution. This applies to both the source code and the object code.
+
+  However we will be entitled to adopt ideas or algorithms contained in the
+  software into our own software and we are not limited in our own
+  development of software in this area.
+
+  We will make no demands on you or your staff for maintenance and agree
+  that neither you nor Carnegie Mellon University has any obligation to
+  provide any maintenance or consulting help with respect to the software.
+
+  In the event that you should release successor versions of the software to
+  us, we agree that they will also fall under all of these terms.
+
+Note that the BDD library is not listed here. As this licence is somewhat
+ambiguous about the library in particular and is generally restrictive, the
+user of HBDD is hereby given explicit permission to link HBDD with it, and
+all the other rights and responsibilities listed in the LGPL apply to the
+code in HBDD that relates to this library. It is your responsibility to
+ensure you do not violate CMU's licence on the BDD library itself.
+
+* Credits
+
+Author: Peter Gammie <peteg@unsw.edu.au>
+Maintainer: mck@cse.unsw.edu.au 
+
+Thanks to Manuel M. T. Chakravarty <http://www.cse.unsw.edu.au/~chak/> for
+help with the FFI and c2hs, and from whom I've shamelessly stolen some
+autoconf magic.
+
+This work was undertaken as part of the "Model Checking Knowledge" project,
+supervised by Ron van der Meyden <http://www.cse.unsw.edu.au/~meyden/>
+and funded by an Australian Research Council Discovery grant. 
+
+* Implementation notes:
+
+** GHC version issues
+
+Due to much hacking this probably doesn't work with GHC 5.x any more.
+
+One of these days it will be structured hierarchically.
+
+** Incompleteness
+
+- The entire library isn't yet bound - I've only implemented what I
+  need. The other functions are almost all similar to what is here, so a bit
+  of cut'n'pasting may be all you need to do...
+
+** ForeignPtrs v's Weak pointers.
+
+My initial thoughts:
+
+ForeignPtrs don't mesh well with BDD operations because:
+
+- the representation is canonical (a given Boolean function is represented
+by a unique pointer no matter how the function is constructed);
+
+  - in ghc5.04.1 there also seems to be some dodginess: call ForeignPtr
+  twice on a given Ptr, and the results are (/=).
+
+- the C implementations are invariably reference-counted (so the free
+function needs to be invoked once per reference, rather than once when the
+pointer dies).
+
+I tried using weak pointers, but it didn't work. After talking to Manuel,
+the problem is related to this:
+
+http://www.cse.unsw.edu.au/~chak/haskell/ghc/comm/rts-libs/foreignptr.html
+
+so I have to use ForeignPtrs here.
+
+Note that this code assumes that:
+
+- ForeignPtr's Eq instance is busted (as above).
+- Hitting a Ptr over the head with ForeignPtr multiple times accumulates
+  the finalizers.
+
+  My understanding of invoking newForeignPtr on a given Ptr several times
+  is that there are simply several boxes around, potentially with
+  different lifetimes; this is fine here as the reference counting in the
+  library takes care of finally freeing the resources used by the BDD.
+
+** Laziness
+
+Laziness really bites.
+
+Specifically, all functions using associations need to be conscious of the
+evaluation state of all of their BDD arguments. Why? Well, consider the
+"forall" function:
+
+> forall :: QBF b => [b] -> b -> b
+> forall vars bdd = unsafePerformIO $ ...
+>	      do {#call unsafe bdd_temp_assoc#} bdd_manager (castPtr assoc) 0
+>		 bddp <- {#call unsafe bdd_forall#} bdd_manager bdd
+>                ...
+
+If the construction of "bdd" involves using an association, then there is a
+window between calling "bdd_temp_assoc" and "bdd_forall" where a lazily
+evaluated BDD can reset the association to something else. Specifically,
+this may happen if "bdd" is first demanded at the actual call to
+"bdd_forall", and so we must arrange for "f" to be demanded *before* the
+call to "bdd_temp_assoc".
+
+Yes, yes, this is an unsafePerformIO-related problem.
+
+** ToDo:
+
+- Dodgy: bvarAdj doesn't play nicely in the presence of laziness + other
+  calls to bvar for the same var. If the bvar call is demanded before the
+  bvarAdj, the 'Adj' doesn't work. Is there a nice way to fix this?
+
+- properly implement substitution/grouping
+  - use the BDD's built-in substitution manager for this + ForeignPtrs
+    for garbage collection.
+  - DONE, but because it uses ints for association id's, we can't use
+    ForeignPtrs naturally (see email to Manuel for details).
+  - as it is, it generates lots of warnings from the C compiler about
+    (int *) <-> (int) conversions without casts. This might not work on
+    some platforms GHC supports...
+
+- bind more profiling functions
+  - figure out what's useful (bdd_size, bdd_size_multiple, ...)
+
+- get the binding mapping var id's -> names, especially in hbdd_print.
+  - CString: lifetimes of objects?
+    - how do i free them after calling bdd_print_bdd? (keep a list of them?)
