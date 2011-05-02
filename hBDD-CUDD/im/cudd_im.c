@@ -32,7 +32,8 @@
 #include "cudd_im.h"
 #include "cuddInt.h"
 
-static DdNode* satone_rec(DdManager *manager, DdNode* f)
+static DdNode *
+satone_rec(DdManager *manager, DdNode* f)
 {
     DdNode *zero = Cudd_ReadLogicZero(manager);
     DdNode *one  = Cudd_ReadOne(manager);
@@ -92,7 +93,8 @@ static DdNode* satone_rec(DdManager *manager, DdNode* f)
 }
 
 /* Return a satisfying variable assignment. */
-DdNode *cudd_satone(DdManager *manager, DdNode *bdd)
+DdNode *
+cudd_satone(DdManager *manager, DdNode *bdd)
 {
     DdNode *result;
 
@@ -107,7 +109,8 @@ DdNode *cudd_satone(DdManager *manager, DdNode *bdd)
 }
 
 /* Prints the variable groups. */
-void cudd_printVarGroups(DdManager *manager)
+void
+cudd_printVarGroups(DdManager *manager)
 {
     if(manager->tree == NULL) {
         fprintf(stdout, ">> cudd_printVarGroups: no groups.\n");

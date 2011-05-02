@@ -6,6 +6,7 @@ Copyright: (C) 2002-2005, 2009 University of New South Wales, (C) 2009-2011 Pete
 Maintainer: peteg42@gmail.com
 Author: Peter Gammie, Jeremy Lee
 License: LGPL
+License-file: LICENCE
 Synopsis: An FFI binding to the CUDD library
 Category: Data
 Description:
@@ -13,7 +14,7 @@ Description:
  hBDD provides a high-level API to some Boolean Decision Diagram
  libraries; this is the CUDD part of it.
 
-extra-source-files: im/cudd_im.c im/cudd_im.h
+Extra-source-files: im/cudd_im.c im/cudd_im.h
 
 Library
   build-Tools: c2hs

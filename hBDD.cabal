@@ -7,7 +7,7 @@ Maintainer: peteg42@gmail.com
 Author: Peter Gammie
 License: LGPL
 License-file: COPYING.LIB
-Synopsis: An FFI binding to the CUDD and CMU BDD libraries
+Synopsis: An abstraction layer for BDD libraries
 Category: Data
 Description:
 
@@ -17,7 +17,7 @@ Description:
 Extra-Source-Files: AUTHORS INSTALL README TODO
 
 Library
-  Build-depends: base, TBC
+  Build-depends: base
   extensions: TypeFamilies TypeSynonymInstances
   exposed-modules: Data.Boolean, Data.Boolean.Relation
   ghc-options: -Wall

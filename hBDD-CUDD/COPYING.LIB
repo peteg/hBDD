@@ -1,38 +1,3 @@
-Take careful note of the licence on the CMU/Long BDD library itself:
-
-http://www-2.cs.cmu.edu/~modelcheck/license.htm
-
-  We understand that the programs SMV, CSML, LTD, SMC and MCB ("the
-  software") are supplied with no warranty. We agree that neither you nor
-  Carnegie Mellon will be held responsible for the correctness of programs
-  or circuits verified using the software.
-
-  The code of the software will not be transferred outside of our
-  institution without your permission and will be used only for research
-  purposes. In particular, we agree that the code will not be included as
-  part of any commercial software package or product of this
-  institution. This applies to both the source code and the object code.
-
-  However we will be entitled to adopt ideas or algorithms contained in the
-  software into our own software and we are not limited in our own
-  development of software in this area.
-
-  We will make no demands on you or your staff for maintenance and agree
-  that neither you nor Carnegie Mellon University has any obligation to
-  provide any maintenance or consulting help with respect to the software.
-
-  In the event that you should release successor versions of the software to
-  us, we agree that they will also fall under all of these terms.
-
-Note that the BDD library is not listed here. As this licence is
-somewhat ambiguous about the library in particular and is generally
-restrictive, the user of hBDD is hereby given explicit permission to
-link hBDD with it, and all the other rights and responsibilities
-listed in the LGPL (see below) apply to the code in hBDD that relates
-to this library. It is your responsibility to ensure you do not
-violate CMU's licence on the BDD library itself.
-
-
 		  GNU LIBRARY GENERAL PUBLIC LICENSE
 		       Version 2, June 1991
 

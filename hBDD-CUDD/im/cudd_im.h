@@ -9,7 +9,7 @@
  * "satone" is borrowed lock-stock from JavaBDD,
  *
  *     http://javabdd.sourceforge.net/
- * 
+ *
  * which carries the following copyright:
  *
  *    Copyright (C) 2003  John Whaley (jwhaley at alum.mit.edu)
@@ -38,7 +38,7 @@
 #include "cudd.h"
 
 /* Not CUDD-specific, but stuff it here for convenience. */
-static inline void
+inline void
 fprintf_neutered(FILE *file, const char *str)
 {
     fprintf(file, "%s", str);

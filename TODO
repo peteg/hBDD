@@ -60,4 +60,31 @@ f x y = x `seq` Just y
 this function is strict in x but not in y, because it is the container
 (Maybe a) that it is strict in, not a itself.
 
-       John
+* Implementation notes:
+
+** Incompleteness
+
+I have only bound the functions that I need.
+
+** Laziness
+
+Laziness really bites.
+
+Specifically, all functions using associations need to be conscious of the
+evaluation state of all of their BDD arguments. Why? Well, consider the
+"forall" function:
+
+> forall :: QBF b => [b] -> b -> b
+> forall vars bdd = unsafePerformIO $ ...
+>             do {#call unsafe bdd_temp_assoc#} bdd_manager (castPtr assoc) 0
+>                bddp <- {#call unsafe bdd_forall#} bdd_manager bdd
+>                ...
+
+If the construction of "bdd" involves using an association, then there is a
+window between calling "bdd_temp_assoc" and "bdd_forall" where a lazily
+evaluated BDD can reset the association to something else. Specifically,
+this may happen if "bdd" is first demanded at the actual call to
+"bdd_forall", and so we must arrange for "f" to be demanded *before* the
+call to "bdd_temp_assoc".
+
+Yes, yes, this is an unsafePerformIO-related problem.

@@ -6,7 +6,8 @@ in Haskell. The intention is to furnish most useful Boolean operations
 with a purely functional interface, while still allowing access to the
 operational features (like variable re-ordering) via the IO monad.
 
-I have abandoned BuDDy support and am focussing on CUDD.
+I have abandoned BuDDy support and am focussing on CUDD. The CMU/Long
+binding is of mostly historic interest.
 
 * Installing
 
@@ -33,103 +34,3 @@ License for more details.
 You should have received a copy of the GNU Library General Public License
 along with this library; if not, write to the Free Software Foundation,
 Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307 USA.
-
-** The CUDD BDD Package
-
-CUDD has the following licence:
-
-  Copyright (c) 1995-2004, Regents of the University of Colorado
-
-  All rights reserved.
-
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions
-  are met:
-
-  Redistributions of source code must retain the above copyright
-  notice, this list of conditions and the following disclaimer.
-
-  Redistributions in binary form must reproduce the above copyright
-  notice, this list of conditions and the following disclaimer in the
-  documentation and/or other materials provided with the distribution.
-
-  Neither the name of the University of Colorado nor the names of its
-  contributors may be used to endorse or promote products derived from
-  this software without specific prior written permission.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-  POSSIBILITY OF SUCH DAMAGE.
-
-** The CMU/Long BDD Package
-
-Take careful note of the licence on this library:
-
-http://www-2.cs.cmu.edu/~modelcheck/license.htm
-
-  We understand that the programs SMV, CSML, LTD, SMC and MCB ("the
-  software") are supplied with no warranty. We agree that neither you nor
-  Carnegie Mellon will be held responsible for the correctness of programs
-  or circuits verified using the software.
-
-  The code of the software will not be transferred outside of our
-  institution without your permission and will be used only for research
-  purposes. In particular, we agree that the code will not be included as
-  part of any commercial software package or product of this
-  institution. This applies to both the source code and the object code.
-
-  However we will be entitled to adopt ideas or algorithms contained in the
-  software into our own software and we are not limited in our own
-  development of software in this area.
-
-  We will make no demands on you or your staff for maintenance and agree
-  that neither you nor Carnegie Mellon University has any obligation to
-  provide any maintenance or consulting help with respect to the software.
-
-  In the event that you should release successor versions of the software to
-  us, we agree that they will also fall under all of these terms.
-
-Note that the BDD library is not listed here. As this licence is somewhat
-ambiguous about the library in particular and is generally restrictive, the
-user of hBDD is hereby given explicit permission to link hBDD with it, and
-all the other rights and responsibilities listed in the LGPL apply to the
-code in hBDD that relates to this library. It is your responsibility to
-ensure you do not violate CMU's licence on the BDD library itself.
-
-* Implementation notes:
-
-** Incompleteness
-
-I have only bound the functions that I need.
-
-** Laziness
-
-Laziness really bites.
-
-Specifically, all functions using associations need to be conscious of the
-evaluation state of all of their BDD arguments. Why? Well, consider the
-"forall" function:
-
-> forall :: QBF b => [b] -> b -> b
-> forall vars bdd = unsafePerformIO $ ...
->             do {#call unsafe bdd_temp_assoc#} bdd_manager (castPtr assoc) 0
->                bddp <- {#call unsafe bdd_forall#} bdd_manager bdd
->                ...
-
-If the construction of "bdd" involves using an association, then there is a
-window between calling "bdd_temp_assoc" and "bdd_forall" where a lazily
-evaluated BDD can reset the association to something else. Specifically,
-this may happen if "bdd" is first demanded at the actual call to
-"bdd_forall", and so we must arrange for "f" to be demanded *before* the
-call to "bdd_temp_assoc".
-
-Yes, yes, this is an unsafePerformIO-related problem.
