@@ -34,7 +34,7 @@ module Data.Boolean.CUDD
 
 #include "cudd_im.h"
 
-import Control.Monad	( liftM, zipWithM_ )
+import Control.Monad	( liftM, when, zipWithM_ )
 
 import Data.IORef	( IORef, newIORef, readIORef, writeIORef )
 import Data.Map         ( Map )
@@ -183,21 +183,42 @@ instance BooleanConstant BDD where
 
 instance BooleanVariable BDD where
     bvar label = unsafePerformIO $
-      newVar label ({#call unsafe Cudd_bddNewVar as _cudd_bddNewVar#} ddmanager)
+      snd `liftM` newVar label ({#call unsafe Cudd_bddNewVar as _cudd_bddNewVar#} ddmanager)
 
+    bvarPair (l, l') = unsafePerformIO $
+     do (vid,  v)  <- newVar l  ({#call unsafe Cudd_bddNewVar as _cudd_bddNewVar#} ddmanager)
+        (vid', v') <- newVar l' ({#call unsafe Cudd_bddNewVar as _cudd_bddNewVar#} ddmanager)
+--        (vid', v') <- newVar l' (allocAfter vid)
+
+        -- FIXME group vid vid'
+        -- putStrLn $ "bvarPair: " ++ show (l, l') ++ " -> " ++ show (vid, vid')
+
+--         when (vid' - vid == 1) $
+--           do putStrLn ">> Grouping vars"
+--              let uvid = (fromIntegral . toInteger) vid
+--              makeTreeNode ddmanager uvid 2 (cFromEnum CUDD_MTR_DEFAULT)
+--              return ()
+
+        return (v, v')
+     where
+        allocAfter vid =
+	  do level <- readPerm ddmanager (cToNum vid)
+	     bddp' <- newVarAtLevel ddmanager (level + 1)
+	     return bddp'
+
+	readPerm = {#call unsafe Cudd_ReadPerm as _cudd_ReadPerm#}
+        makeTreeNode = {#call unsafe Cudd_MakeTreeNode as _cudd_MakeTreeNode#}
+	newVarAtLevel = {#call unsafe Cudd_bddNewVarAtLevel as _cudd_bddNewVarAtLevel#}
+
+
+{-
     -- FIXME: get the variable grouping right.
     -- Are the variable groups adjusted when new variables are added using
     -- newVarAtLevel? - I can't find anything in the CUDD source code that
     -- indicates they are.
     -- This code does the "adjacent" thing, but doesn't group variables.
-    bvarAdj label bdd = bdd `seq` unsafePerformIO $ newVar label allocAfter
+    bvarPair (l, l') = unsafePerformIO $ newVar l l' allocAfter
         where
-          allocAfter =
-	      withBDD bdd $ \bddp ->
-		  do vid <- readIndex bddp
-		     level <- readPerm ddmanager (cToNum vid)
-		     bddp' <- newVarAtLevel ddmanager (level + 1)
-		     return bddp'
 
 --  		 makeTreeNode ddmanager vid 2 (cFromEnum CUDD_MTR_DEFAULT)
 --  		 vid' <- withBDD bdd readIndex
@@ -210,9 +231,7 @@ instance BooleanVariable BDD where
 
 
 	  readIndex = {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#}
-	  readPerm = {#call unsafe Cudd_ReadPerm as _cudd_ReadPerm#}
-	  newVarAtLevel = {#call unsafe Cudd_bddNewVarAtLevel as _cudd_bddNewVarAtLevel#}
--- 	  makeTreeNode = {#call unsafe Cudd_MakeTreeNode as _cudd_MakeTreeNode#}
+-}
 
     unbvar bdd = bdd `seq` unsafePerformIO $
 		   withBDD bdd $ \bddp ->
@@ -222,20 +241,22 @@ instance BooleanVariable BDD where
 			           Nothing -> "(VID: " ++ show vid ++ ")"
 				   Just v  -> v
 
-newVar :: String -> IO (Ptr BDD) -> IO BDD
+newVar :: String -> IO (Ptr BDD) -> IO (CInt, BDD)
 newVar label allocVar =
       do (toBDD, fromBDD) <- readIORef bdd_vars
          case label `Map.lookup` toBDD of
            Just vid ->
              {#call unsafe Cudd_bddIthVar as _cudd_bddIthVar#} ddmanager vid
-               >>= addBDDnullFinalizer
+               >>= addBDDnullFinalizer >>= \v -> return (vid, v)
            Nothing ->
-             do bddp <- allocVar
+             do putStrLn $ "Allocating for: " ++ label
+                bddp <- allocVar
 		vid <- {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#} bddp
+                let svid = (fromIntegral . toInteger) vid
 		--putStrLn $ label ++ " -> " ++ (show (vid, bdd))
-		writeIORef bdd_vars $ (Map.insert label ((fromIntegral . toInteger) vid)  toBDD,
-				       Map.insert ((fromIntegral . toInteger) vid) label fromBDD)
-		addBDDnullFinalizer bddp
+		writeIORef bdd_vars ( Map.insert label svid  toBDD
+                                    , Map.insert svid  label fromBDD )
+		addBDDnullFinalizer bddp >>= \v -> return (svid, v)
 
 instance Boolean BDD where
     bAND  = bddBinOp AND
@@ -327,8 +348,8 @@ cudd_rename (MkSubst subst) f = unsafePerformIO $
     allocaArray len $ \arrayx -> allocaArray len $ \arrayx' ->
       do zipWithM_ (pokeSubst arrayx arrayx') subst [0..]
          bddp <- {#call unsafe cudd_bddSwapVariables#} ddmanager fp arrayx arrayx' (fromIntegral len)
-         mapM (\ (BDD v, BDD v') -> do touchForeignPtr v
-		                       touchForeignPtr v') subst
+         mapM_ (\ (BDD v, BDD v') -> do touchForeignPtr v
+		                        touchForeignPtr v') subst
          addBDDfinalizer bddp
     where
       pokeSubst :: Ptr (Ptr BDD) -> Ptr (Ptr BDD) -> (BDD, BDD) -> Int -> IO ()

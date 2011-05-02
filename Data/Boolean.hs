@@ -1,33 +1,26 @@
 -------------------------------------------------------------------
 -- |
 -- Module      :  Boolean
--- Copyright   :  (C)opyright [2002..2005], 2009 UNSW
+-- Copyright   :  (C) 2002-2005, 2009 University of New South Wales, (C) 2009-2011 Peter Gammie
 -- License     :  LGPL (see COPYING.LIB for details)
 --
--- Author      :  Peter Gammie
--- Maintainer  :  peteg42 at gmail dot com
+-- An interface to libraries supporting efficient manipulation of
+-- Boolean functions. It is an evolution of @Logical Abstractions in
+-- Haskell@ by Nancy A. Day, John Launchbury and Jeff Lewis, Haskell
+-- Workshop, Paris, October 1999.
 --
--- An interface to libraries supporting efficient manipulation of Boolean
--- functions. It was originally based on:
---
---  \"Logical Abstractions in Haskell\" Nancy A. Day, John Launchbury
---   and Jeff Lewis, Haskell Workshop, Paris, October 1999.
---
--- but has evolved significantly.
+-- This module is intended to provide a uniform abstraction of BDD
+-- libraries. Note there is some efficiency and predictability cost
+-- here: laziness may make it difficult to predict when BDDs actually
+-- get constructed.
 --
 -- Note the use of 'neg' rather than @not@ to avoid a clash with
 -- @Prelude.not@.
---
--- Note that an instance of 'Boolean' must be an instance of 'Eq'. This
--- instance is expected to provide /semantic/ equality (as provided by a
--- BDD package).
---
--- FIXME improve docs.
 -------------------------------------------------------------------
 module Data.Boolean
     (
      -- * Abstract interface.
-    	BooleanConstant(..)
+        BooleanConstant(..)
     ,	BooleanVariable(..)
     ,	Boolean(..)
     ,	QBF(..)
@@ -36,7 +29,7 @@ module Data.Boolean
 
     -- * Lazy boolean operators.
     ,	(/\), nand, (\/), nor, xor, xnor
-    ,	(?), (==>), (<=>), neg
+    ,	(?), (-->), (<--), (<->), neg
 
     -- * Higher-order (derived) boolean operators.
     ,	conjoin
@@ -60,21 +53,24 @@ module Data.Boolean
 -------------------------------------------------------------------
 
 -- | Boolean constants.
+--
+-- Note that an instance of 'BooleanConstant' must be an instance of
+-- 'Eq'. This instance is expected to provide /semantic/ equality on
+-- boolean functions, as is typical of BDD packages, but we sometimes
+-- violate this intentionally (e.g. 'BF').
 class (Eq b, Show b) => BooleanConstant b where
     false :: b
     true :: b
 
 -- | Boolean variables.
 class BooleanVariable b where
-    -- | Injects objects of type @String@ into the 'Boolean' representation
-    -- type @b@.
+    -- | A single variable.
     bvar :: String -> b
-    -- | Introduces a variable \'adjacent\' to an existing one. What this
-    -- means is implementation-defined (it may reduce to 'bvar'), but the
-    -- intention is to be able to do the classic (current, next)-state
-    -- variable pairing optimisation.
-    bvarAdj :: String -> b -> b
-    bvarAdj label b  = b `seq` bvar label
+    -- | A pair of variables, notionally \'adjacent\'. What this means
+    -- is implementation-defined, but the intention is the classic
+    -- (current, next)-state variable pairing optimisation.
+    bvarPair :: (String, String) -> (b, b)
+    bvarPair (l, l') = (bvar l, bvar l')
 
     -- | Reverse mapping.
     unbvar :: b -> String
@@ -96,7 +92,7 @@ class BooleanConstant b => Boolean b where
     bNOR :: b -> b -> b
     x `bNOR` y = bNEG (x `bOR` y)
     bXOR :: b -> b -> b
-    x `bXOR` y = (x `bOR` y) `bAND` (bNEG (x `bAND` y))
+    x `bXOR` y = (x \/ y) /\ (neg (x /\ y))
     bXNOR :: b -> b -> b
     x `bXNOR` y = bNEG (x `bXOR` y)
     -- | If-then-else.
@@ -111,15 +107,22 @@ class BooleanConstant b => Boolean b where
 
 -- | Quantified Boolean Formulae (QBF) operations.
 class (Boolean b, BooleanVariable b) => QBF b where
+    -- | The type of aggregations of 'BooleanVariable's.
+    --
+    -- Some BDD packages have efficient (reusable) variable aggregation structures.
     data Group b :: *
+
+    -- | Construct aggregations.
     mkGroup :: [b] -> Group b
+    -- | Existentially quantify out a given set of variables.
     exists :: Group b -> b -> b
+    -- | Universally quantify out a given set of variables.
     forall :: Group b -> b -> b
     -- | Computes the relational product of two 'Boolean' formulas:
     --
-    -- @exists qvars (f \/\\ g)@
+    -- @rel_product qvars f g = exists qvars (f \/\\ g)@
     rel_product :: Group b -> b -> b -> b
-    rel_product qvars g h = exists qvars (g /\ h)
+    rel_product qvars f g = exists qvars (f /\ g)
 
 -- | Substitutions.
 class (Boolean b, BooleanVariable b) => Substitution b where
@@ -143,37 +146,40 @@ class (Boolean b, BooleanVariable b) => Substitution b where
 class (QBF b, Substitution b) => BooleanOps b where
     -- | Extract the variable labelling the topmost node in /f/.
     bif :: b	-- ^ /f/
-	-> b
+        -> b
     -- | Extract the this-node-false-branch of a /f/.
     belse :: b	-- ^ /f/
-	  -> b
+          -> b
     -- | Extract the this-node-true-branch of a /f/.
     bthen :: b	-- ^ /f/
-	  -> b
+          -> b
 
     -- | Returns a BDD which agrees with /f/ for all valuations for which
     -- /g/ is true, and which is hopefully smaller than /f/.
     reduce :: b		-- ^ /f/
-	   -> b		-- ^ /g/ (a /care set/)
-	   -> b
+           -> b		-- ^ /g/ (a /care set/)
+           -> b
 
     -- | Finds a satisfying variable assignment for /f/.
     satisfy :: b	-- ^ /f/
-	    -> b
+            -> b
 
 -------------------------------------------------------------------
+
 -- Lazy versions of the type-class members.
 -- The "optimisations" may or may not be such, but they make reading
 -- a 'BF' structure a lot easier.
--------------------------------------------------------------------
+
 infixl 7 /\
 infixl 7 \/
 infixl 7 `nand`
 infixl 7 `nor`
-infixl 4 <=>
-infixr 4 ==>
+infixl 4 <->
+infixr 4 -->
+infixr 4 <--
 infixl 4 `xor`
 
+-- | Lazy and.
 (/\) :: Boolean b => b -> b -> b
 x /\ y
    | x == false = false
@@ -183,6 +189,7 @@ x /\ y
    | otherwise  = x `bAND` y
 {-# INLINE (/\) #-}
 
+-- | Lazy not-and.
 nand :: Boolean b => b -> b -> b
 x `nand` y
     | x == false = true
@@ -192,6 +199,7 @@ x `nand` y
     | otherwise = x `bNAND` y
 {-# INLINE nand #-}
 
+-- | Lazy or.
 (\/) :: Boolean b => b -> b -> b
 x \/ y
     | x == false = y
@@ -201,6 +209,7 @@ x \/ y
     | otherwise  = x `bOR` y
 {-# INLINE (\/) #-}
 
+-- | Lazy not-or.
 nor :: Boolean b => b -> b -> b
 x `nor` y
     | x == false = neg y
@@ -210,6 +219,7 @@ x `nor` y
     | otherwise  = x `bNOR` y
 {-# INLINE nor #-}
 
+-- | Lazy exclusive-or.
 xor :: Boolean b => b -> b -> b
 x `xor` y
     | x == false = y
@@ -219,10 +229,12 @@ x `xor` y
     | otherwise  = x `bXOR` y
 {-# INLINE xor #-}
 
+-- | Lazy exclusive-not-or.
 xnor :: Boolean b => b -> b -> b
 xnor = bXNOR
 {-# INLINE xnor #-}
 
+-- | Lazy if-then-else.
 (?) :: Boolean b => b -> (b, b) -> b
 i ? (t, e)
     | i == false = e
@@ -230,16 +242,24 @@ i ? (t, e)
     | otherwise  = bITE i t e
 {-# INLINE (?) #-}
 
-(==>) :: Boolean b => b -> b -> b
-x ==> y
+-- | Lazy implication.
+(-->) :: Boolean b => b -> b -> b
+x --> y
     | x == false = true
     | otherwise  = x `bIMP` y
-{-# INLINE (==>) #-}
+{-# INLINE (-->) #-}
 
-(<=>) :: Boolean b => b -> b -> b
-(<=>) = bIFF
-{-# INLINE (<=>) #-}
+-- | Lazy reverse implication.
+(<--) :: Boolean b => b -> b -> b
+x <-- y = y --> x
+{-# INLINE (<--) #-}
 
+-- | If-and-only-if.
+(<->) :: Boolean b => b -> b -> b
+(<->) = bIFF
+{-# INLINE (<->) #-}
+
+-- | Negation.
 neg :: Boolean b => b -> b
 neg = bNEG
 {-# INLINE neg #-}
@@ -265,8 +285,8 @@ fix s0 f = loop s0
       loop s =
         let s' = f s
          in if s == s'
-	   then s
-	   else loop s'
+           then s
+           else loop s'
 
 -- | "fix" with state.
 
@@ -277,39 +297,38 @@ fix2 a0 s0 f = loop (a0, s0)
         let as'@(_a', s') = f a s
         in if s == s'
           then as
-	  else loop as'
+          else loop as'
 
 -------------------------------------------------------------------
+
 -- | Render a 'Boolean' type as a sum-of-products. This was stolen
 -- lock-stock from David Long's calculator example.
--------------------------------------------------------------------
-
 sop :: (BooleanOps b, RenderBool a) => b -> (a -> a)
 sop f0
     | f0 == true  = rbTrue
     | f0 == false = rbFalse
     | otherwise   = sop' f0
     where sop' f = let outside = neg f
-		       cube = satisfy f
-		       f' = f /\ (neg cube)
-	            in (printCube $ reduce cube (outside \/ cube)) . 
-		       (if f' == false
-			  then id
-			  else rbOr . (sop' f'))
+                       cube = satisfy f
+                       f' = f /\ (neg cube)
+                    in (printCube $ reduce cube (outside \/ cube)) .
+                       (if f' == false
+                          then id
+                          else rbOr . (sop' f'))
 
-	  printCube cube = let v        = bif cube
-			       cubeThen = bthen cube
-			       cubeElse = belse cube
-			       cubeNext = if cubeThen == false
-					    then cubeElse
-					    else cubeThen
-			    in (if v /\ cube == false
-				  then rbNeg
-				  else id)        .
-			       (rbVar $ unbvar v) .
-			       (if cubeNext == true
-				  then id
-				  else rbAnd . printCube cubeNext)
+          printCube cube = let v        = bif cube
+                               cubeThen = bthen cube
+                               cubeElse = belse cube
+                               cubeNext = if cubeThen == false
+                                            then cubeElse
+                                            else cubeThen
+                            in (if v /\ cube == false
+                                  then rbNeg
+                                  else id)        .
+                               (rbVar $ unbvar v) .
+                               (if cubeNext == true
+                                  then id
+                                  else rbAnd . printCube cubeNext)
 {-# SPECIALIZE sop :: BooleanOps b => b -> (String -> String) #-}
 
 -- | A class for the text constants and operators used by 'sop'.
@@ -330,24 +349,24 @@ instance RenderBool String where
     rbNeg   = showString "~"
 
 -------------------------------------------------------------------
+
 -- | An abstract syntax tree-ish instance of the 'Boolean' interface,
 -- useful for debugging: shows the order in which operations are performed.
 -- Note the 'Eq' instance is /not/ semantic equality.
--------------------------------------------------------------------
 data BF = BFtrue
-	| BFfalse
-	| BFvar String
-	| BF `BFand` BF
-	| BF `BFor` BF
-	| BF `BFxor` BF
-	| BFite BF BF BF
-	| BF `BFimplies` BF
-	| BF `BFiff` BF
-	| BFneg BF
-	| BFexists [BF] BF
-	| BFforall [BF] BF
-	| BFsubst [(BF, BF)] BF
-	  deriving (Eq, Show)
+        | BFfalse
+        | BFvar String
+        | BF `BFand` BF
+        | BF `BFor` BF
+        | BF `BFxor` BF
+        | BFite BF BF BF
+        | BF `BFimplies` BF
+        | BF `BFiff` BF
+        | BFneg BF
+        | BFexists [BF] BF
+        | BFforall [BF] BF
+        | BFsubst [(BF, BF)] BF
+          deriving (Eq, Show)
 
 instance BooleanConstant BF where
     false = BFfalse
@@ -379,8 +398,8 @@ instance Substitution BF where
     substitute (MkBFpair s) = BFsubst s
 
 -------------------------------------------------------------------
+
 -- Overload the constants for Bool and String.
--------------------------------------------------------------------
 instance BooleanConstant Bool where
     false = False
     true = True
@@ -403,10 +422,10 @@ instance BooleanConstant String where
     true = "True"
 
 -------------------------------------------------------------------
+
 -- BDD-specific operations.
--------------------------------------------------------------------
 
--- | What kind of reordering should we use?
+-- | BDD libraries tend to include some kind of variable reordering
+-- heuristics. These are some common ones.
 data ReorderingMethod = ReorderSift | ReorderStableWindow3
-			deriving (Eq, Ord, Show)
-
+                        deriving (Eq, Ord, Show)

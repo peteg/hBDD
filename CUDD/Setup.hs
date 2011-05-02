@@ -1,2 +1,2 @@
-import Distribution.Simple
+import Test.TBC
 main = defaultMain

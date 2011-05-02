@@ -1,6 +1,13 @@
 A Haskell Binding to some BDD Libraries.		-*- Outline -*-
 ----------------------------------------
 
+FIXME update
+
+Linux: no GHCi support (Cabal's not doing the job)
+
+OS X: CMUBDD has no GHCi support. Also need to hack the header as
+__STDC__ apparently isn't working properly in c2hs.
+
 * Prerequisites
 
 HBDD has been developed and tested using GHC 6.2.2 and 6.4 on Debian
@@ -17,11 +24,6 @@ course...
 You may also wish to compile and install the Long/CMU BDD package:
 
 	http://www-2.cs.cmu.edu/~modelcheck/bdd.html
-
-or BuDDy:
-
-	http://vlsicad.eecs.umich.edu/BK/Slots/cache/www.itu.dk/research/buddy/
-	http://buddy.sourceforge.net/
 
 CUDD is included with HBDD:
 
@@ -110,14 +112,6 @@ install".
 To install it, just build and install the contents of the "mem" and "bdd"
 subdirectories - HBDD does not require the other things.
 
-* Building from CVS
-
-  % cd <path>/hbdd
-  % autoconf
-  % tar xfzv <path>cudd-2.4.1.tar.gz
-
-...and then follow the instructions for building from .tar.gz
-
 * Mac OS X issues
 
 ** BuDDy
@@ -144,39 +138,3 @@ other systems:
 
 Note BuDDy also uses the filename "libbdd.a" and places it in ${prefix}/lib
 by default. The approach outlined here will allow you to use both libraries.
-
-** GHC 6.4 and GCC 4.0 (on Tiger, Mac OS X 10.4)
-
-There is an issue with these versions of the compilers. I excerpt the
-following from a README for Pugs 6.2.10 (and thank the Pugs hackers
-enormously for the tip):
-
-Perl6-Pugs-6.2.10.readme:
-
-CAVEATS FOR GCC 4.0 USERS
--------------------------
-
-Mac OS X 10.4 "Tiger" users may see this error message when compiling Pugs:
-
-    ___DISCARD__
-    collect2: ld returned 1 exit status
-
-Until GHC 6.4.1 is released, you need to need to issue this command first:
-
-    sudo gcc_select 3.3
-
-Then recompiling Pugs using a clean tree.  Other users of GCC 4.0 systems
-may also need to switch to use GCC 3.3 to compile Pugs at this moment.
-
-Note that objects compiled with GCC 4.0 can't be linked with GCC 3.3 objects.
-This means that if you're embedding a Parrot you've built with GCC 4.0, Pugs
-will fail during linking with errors like:
-
-    ld: Undefined symbols:
-    _fprintf$LDBLStub
-    _sprintf$LDBLStub
-    _vfprintf$LDBLStub
-    _snprintf$LDBLStub
-    _printf$LDBLStub
-
-Try building a new Parrot with gcc 3.3, then compile Pugs again.

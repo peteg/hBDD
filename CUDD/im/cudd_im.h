@@ -31,6 +31,8 @@
 #ifndef	_CUDD_IM_H_
 #define	_CUDD_IM_H_
 
+/* In your face Apple: c2hs chokes on (^) blocks non-standardness. */
+#undef __BLOCKS__
 #include <stdio.h>
 #include "util.h"
 #include "cudd.h"
