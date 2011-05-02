@@ -47,48 +47,6 @@ should be fine; earlier versions probably not).
 If you find you need these packages to simply build hBDD, this is a
 bug. Please notify us and we will fix it.
 
-* Simple install procedure
-
-After installing a BDD package (see below):
-
-   % cd <working directory>
-   % gunzip <package.tar.gz>
-   % tar xf package.tar
-   % cd <package>
-   % ./configure --with-<buddy|cudd|longbdd>=<bdd lib location> --prefix=<install location>
-   % make install
-
-Note that if you have installed BuDDy or the CMU/Long BDD package in your
-home directory, or just wish to use CUDD, you can simply say:
-
-   % ./configure
-
-and things should be found. You'll probably want to use the '--prefix'
-option in this case, though. Read through 'config.log' for clues as to what
-went wrong if the library is installed but not found.
-
-Please read:
-
-   % ./configure --help
-
-for other options, most of which are standard or self-explanatory.
-
-After installation hBDD relies on the originally installed BuDDy and
-CMU/Long libraries - these cannot be moved or deleted. The CUDD libraries
-are installed in the hBDD library directory, so you can simply delete the
-entire hBDD source tree after installation if you are using that package.
-
-* BuDDy
-
-If you use the latest BuDDy (version 2.4 from Sourceforge), then use a
-configure line similar to:
-
-  % ./configure --enable-shared=no
-
-This library does not have great dynamic variable allocation support (it
-appears to assume you will allocate all variables at the start, cf the other
-packages) and so runs fairly poorly.
-
 * The CUDD BDD Package
 
 CUDD lacks an install target and a configure script, and so needs to be
@@ -114,12 +72,6 @@ subdirectories - hBDD does not require the other things.
 
 * Mac OS X issues
 
-** BuDDy
-
-You'll need to run ranlib(1) over the installed library:
-
-% ranlib ~/lib/libbdd.a
-
 ** The CUDD BDD Package
 
 You'll need to change the Makefile. In particular, OS X apparently doesn't
@@ -135,6 +87,3 @@ other systems:
 % mv ~/lib/libbdd.a ~/lib/libmem.a ~/lib/powerpc/
 
 (NOTE: adjust paths as appropriate).
-
-Note BuDDy also uses the filename "libbdd.a" and places it in ${prefix}/lib
-by default. The approach outlined here will allow you to use both libraries.

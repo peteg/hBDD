@@ -38,10 +38,10 @@
 #include "cudd.h"
 
 /* Not CUDD-specific, but stuff it here for convenience. */
-__inline__ void
+static inline void
 fprintf_neutered(FILE *file, const char *str)
 {
-    fprintf(file, str);
+    fprintf(file, "%s", str);
     fflush(file);
 }
 

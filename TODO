@@ -21,6 +21,11 @@ To do			-*- Outline -*-
   - CString: lifetimes of objects?
     - how do i free them after calling bdd_print_bdd? (keep a list of them?)
 
+* CUDD
+
+FIXME: bvarAdj: add variable blocks
+FIXME verify garbage collection behaviour
+
 * Adopt Meacham's fix:
 
 On Thu, Aug 13, 2009 at 06:33:35PM +1000, Peter Gammie wrote:

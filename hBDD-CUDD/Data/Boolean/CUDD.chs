@@ -1,26 +1,19 @@
 -- -*- haskell -*-- -----------------------------------------------
 -- |
--- Module      : Data.Boolean.CUDD
--- Copyright   : (C)opyright [2002..2005], 2009 UNSW
--- License     : LGPL (see COPYING.LIB for details)
---
--- Author      : Peter Gammie, Jeremy Lee.
--- Maintainer  : mck at cse.unsw.edu.au
+-- Module      :  Data.Boolean.CUDD
+-- Copyright   :  (C) 2002-2005, 2009 University of New South Wales, (C) 2009-2011 Peter Gammie
+-- License     :  LGPL (see COPYING.LIB for details)
 --
 -- A binding for CUDD (Fabio Somenzi, University of Colorado).
 --
--- FIXME:
---  - bvarAdj: add variable blocks
---  - verify garbage collection behaviour
---  - complete (or nuke) non-MCK-used functions.
---    - substitute, reduce
+-- Note this library is not thread-safe.
 -------------------------------------------------------------------
 module Data.Boolean.CUDD
     (
     	BDD
     ,	module Data.Boolean
 
-        -- Functions specific to this binding.
+        -- * CUDD-specific functions
 -- 	    ,	gc
     ,	stats
     ,	dynamicReOrdering
@@ -34,7 +27,7 @@ module Data.Boolean.CUDD
 
 #include "cudd_im.h"
 
-import Control.Monad	( liftM, when, zipWithM_ )
+import Control.Monad	( liftM, zipWithM_ )
 
 import Data.IORef	( IORef, newIORef, readIORef, writeIORef )
 import Data.Map         ( Map )
@@ -106,7 +99,7 @@ cFromEnum  = fromIntegral . fromEnum
 -- | Variable reordering tree options.
 {#enum CuddMTRParams {} #}
 
--- | A BDD.
+-- | The abstract type of BDDs.
 {#pointer *DdNode as BDD foreign newtype#}
 
 withBDD :: BDD -> (Ptr BDD -> IO a) -> IO a
@@ -202,7 +195,7 @@ instance BooleanVariable BDD where
         return (v, v')
      where
         allocAfter vid =
-	  do level <- readPerm ddmanager (cToNum vid)
+	  do level <- readPerm ddmanager (cToNum (vid :: Integer))
 	     bddp' <- newVarAtLevel ddmanager (level + 1)
 	     return bddp'
 
@@ -233,7 +226,7 @@ instance BooleanVariable BDD where
 	  readIndex = {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#}
 -}
 
-    unbvar bdd = bdd `seq` unsafePerformIO $
+    unbvar bdd = unsafePerformIO $ bdd `seq`
 		   withBDD bdd $ \bddp ->
 		     do vid <- {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#} bddp
 			(_, fromBDD) <- readIORef bdd_vars
@@ -322,13 +315,13 @@ withGroup :: Group BDD -> (Ptr BDD -> IO a) -> IO a
 withGroup (MkGroup g) = withBDD g
 
 cudd_exists :: Group BDD -> BDD -> BDD
-cudd_exists group bdd = bdd `seq` unsafePerformIO $
+cudd_exists group bdd = unsafePerformIO $ bdd `seq`
   withGroup group $ \groupp -> withBDD bdd $ \bddp ->
     {#call unsafe cudd_bddExistAbstract#} ddmanager bddp groupp
       >>= addBDDfinalizer
 
 cudd_forall :: Group BDD -> BDD -> BDD
-cudd_forall group bdd = bdd `seq` unsafePerformIO $
+cudd_forall group bdd = unsafePerformIO $ bdd `seq`
   withGroup group $ \groupp -> withBDD bdd $ \bddp ->
     {#call unsafe cudd_bddUnivAbstract#} ddmanager bddp groupp
       >>= addBDDfinalizer
@@ -375,11 +368,12 @@ cudd_satisfy bdd = unsafePerformIO $
 -- Operations specific to this BDD binding.
 -------------------------------------------------------------------
 
+-- | Dump usage statistics to the given 'Handle'.
 stats :: Handle -> IO ()
 stats handle =
     do cfile <- handleToCFile handle
        printCFile cfile "CUDD stats\n"
-       {#call unsafe Cudd_PrintInfo as _cudd_PrintInfo#} ddmanager cfile
+       _ <- {#call unsafe Cudd_PrintInfo as _cudd_PrintInfo#} ddmanager cfile
        printCFile cfile "\nVariable groups\n"
        {#call unsafe cudd_printVarGroups#} ddmanager
 
@@ -394,6 +388,7 @@ roMap :: [(ReorderingMethod, CUDDReorderingMethod)]
 roMap = [(ReorderSift, CUDD_REORDER_SIFT),
 	 (ReorderStableWindow3, CUDD_REORDER_WINDOW3)]
 
+-- | Set the dynamic variable ordering heuristic.
 dynamicReOrdering :: ReorderingMethod -> IO ()
 dynamicReOrdering rom =
     case lookup rom roMap of
@@ -424,6 +419,7 @@ varIndices = do (toBDD, _fromBDD) <- readIORef bdd_vars
 -- BDD Statistics.
 ----------------------------------------
 
+-- | Determine the size of a BDD.
 bddSize :: BDD -> Int
 bddSize bdd = unsafePerformIO $
   do size <- withBDD bdd ({#call unsafe Cudd_DagSize as _cudd_DagSize#})

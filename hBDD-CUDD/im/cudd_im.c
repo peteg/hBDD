@@ -9,7 +9,7 @@
  * "satone" is borrowed lock-stock from JavaBDD,
  *
  *     http://javabdd.sourceforge.net/
- * 
+ *
  * which carries the following copyright:
  *
  *    Copyright (C) 2003  John Whaley (jwhaley at alum.mit.edu)
@@ -41,24 +41,24 @@ static DdNode* satone_rec(DdManager *manager, DdNode* f)
     DdNode *low;
     DdNode *r;
     unsigned int index;
-    
+
     if (F == zero ||
-    	F == one) {
-    	return f;
+        F == one) {
+        return f;
     }
-  	
+
     index = F->index;
     high = cuddT(F);
     low = cuddE(F);
     if (Cudd_IsComplement(f)) {
-	high = Cudd_Not(high);
-	low = Cudd_Not(low);
+        high = Cudd_Not(high);
+        low = Cudd_Not(low);
     }
     if(low == zero) {
         DdNode* res = satone_rec(manager, high);
         if (res == NULL) {
             return NULL;
-  	}
+        }
         cuddRef(res);
         if (Cudd_IsComplement(res)) {
             r = cuddUniqueInter(manager, (int)index, Cudd_Not(res), one);
@@ -87,7 +87,7 @@ static DdNode* satone_rec(DdManager *manager, DdNode* f)
         r = Cudd_Not(r);
         cuddDeref(res);
     }
-    
+
     return r;
 }
 
@@ -95,12 +95,12 @@ static DdNode* satone_rec(DdManager *manager, DdNode* f)
 DdNode *cudd_satone(DdManager *manager, DdNode *bdd)
 {
     DdNode *result;
-    
+
     do {
         manager->reordered = 0;
         result = satone_rec(manager, bdd);
     } while (manager->reordered == 1);
-    
+
     Cudd_Ref(result);
 
     return result;
@@ -110,9 +110,9 @@ DdNode *cudd_satone(DdManager *manager, DdNode *bdd)
 void cudd_printVarGroups(DdManager *manager)
 {
     if(manager->tree == NULL) {
-	fprintf(stdout, ">> cudd_printVarGroups: no groups.\n");
+        fprintf(stdout, ">> cudd_printVarGroups: no groups.\n");
     } else {
-	Mtr_PrintGroups(manager->tree, 0);
+        Mtr_PrintGroups(manager->tree, 0);
     }
 }
 
@@ -180,7 +180,7 @@ DdNode *cudd_bddT(DdNode *node)
     DdNode *res = Cudd_T(node);
 
     if(Cudd_IsComplement(node)) {
-	res = Cudd_Not(res);
+        res = Cudd_Not(res);
     }
 
     Cudd_Ref(res);
@@ -192,7 +192,7 @@ DdNode *cudd_bddE(DdNode *node)
     DdNode *res = Cudd_E(node);
 
     if(Cudd_IsComplement(node)) {
-	res = Cudd_Not(res);
+        res = Cudd_Not(res);
     }
 
     Cudd_Ref(res);
@@ -214,7 +214,7 @@ DdNode *cudd_bddUnivAbstract(DdManager *dd, DdNode *f, DdNode *cube)
 }
 
 DdNode *cudd_bddAndAbstract(DdManager *dd,
-			    DdNode *f, DdNode *g, DdNode *cube)
+                            DdNode *f, DdNode *g, DdNode *cube)
 {
     DdNode *res = Cudd_bddAndAbstract(dd, f, g, cube);
     Cudd_Ref(res);
@@ -222,7 +222,7 @@ DdNode *cudd_bddAndAbstract(DdManager *dd,
 }
 
 DdNode *cudd_bddSwapVariables(DdManager *dd, DdNode *f,
-			      DdNode **x, DdNode **y, int n)
+                              DdNode **x, DdNode **y, int n)
 {
     DdNode *res = Cudd_bddSwapVariables(dd, f, x, y, n);
     Cudd_Ref(res);
