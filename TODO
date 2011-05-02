@@ -1,0 +1,54 @@
+To do			-*- Outline -*-
+-----
+
+- Dodgy: bvarAdj doesn't play nicely in the presence of laziness + other
+  calls to bvar for the same var. If the bvar call is demanded before the
+  bvarAdj, the 'Adj' doesn't work. Is there a nice way to fix this?
+
+- properly implement substitution/grouping
+  - use the BDD's built-in substitution manager for this + ForeignPtrs
+    for garbage collection.
+  - DONE, but because it uses ints for association id's, we can't use
+    ForeignPtrs naturally (see email to Manuel for details).
+  - as it is, it generates lots of warnings from the C compiler about
+    (int *) <-> (int) conversions without casts. This might not work on
+    some platforms GHC supports...
+
+- bind more profiling functions
+  - figure out what's useful (bdd_size, bdd_size_multiple, ...)
+
+- get the binding mapping var id's -> names, especially in hbdd_print.
+  - CString: lifetimes of objects?
+    - how do i free them after calling bdd_print_bdd? (keep a list of them?)
+
+* Adopt Meacham's fix:
+
+On Thu, Aug 13, 2009 at 06:33:35PM +1000, Peter Gammie wrote:
+In brief, I'm sure what you propose works, but is it Haskell98? I
+intended to get that lib to work under NHC (in the distant past).
+
+I don't think 'evaluate' is haskell 98, but I do think nhc supports it.
+If not, here is a pure haskell 98 version that will work the way you
+want
+
+newtype BDD = BDD (ForeignPtr Int)
+
+exists :: Group BDD -> BDD -> BDD
+exists group bdd = unsafePerformIO $
+seq bdd $ withGroup group $ \ gid ->
+  do bdd_assoc bdd_manager gid
+     withBDD bdd ({#call unsafe bdd_exists#} bdd_manager) >>=
+addBDDfinalizer
+
+
+Notice we are seqing bdd not with the value returned, but the second
+argument is an 'IO a' itself. so evaluating the second argument doesn't
+actually mean running the IO action, it just means deciding on which IO
+action will be run. sort of like the following with the Maybe monad.
+
+f x y = x `seq` Just y
+
+this function is strict in x but not in y, because it is the container
+(Maybe a) that it is strict in, not a itself.
+
+       John

@@ -1,15 +1,16 @@
 Name: CMUBDD
-Version: 0.1.0
+Version: 0.0.1
 Cabal-version: >= 1.2
 Build-type: Simple
-Copyright: (C) [2002..2005], 2009 University of New South Wales
+Copyright: (C) 2002-2005, 2009 University of New South Wales, (C) 2009-2011 Peter Gammie
 Maintainer: peteg42@gmail.com
 Author: Peter Gammie
 License: LGPL
 Synopsis: An FFI binding to CMU/Long's BDD library
+Category: Data
 Description:
 
- HBDD provides a high-level API to the CUDD and CMU/Long Boolean Decision
+ hBDD provides a high-level API to the CUDD and CMU/Long Boolean Decision
  Diagram libraries; this is the CMU/Long part of it.
 
 Library

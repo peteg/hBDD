@@ -14,7 +14,7 @@ Description:
  hBDD provides a high-level API to the CUDD and CMU Boolean Decision
  Diagram libraries.
 
-Extra-Source-Files: AUTHORS INSTALL README
+Extra-Source-Files: AUTHORS INSTALL README TODO
 
 Library
   Build-depends: base, TBC

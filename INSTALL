@@ -10,10 +10,10 @@ __STDC__ apparently isn't working properly in c2hs.
 
 * Prerequisites
 
-HBDD has been developed and tested using GHC 6.2.2 and 6.4 on Debian
+hBDD has been developed and tested using GHC 6.2.2 and 6.4 on Debian
 GNU/Linux and GHC 6.4 on Mac OS X 10.4. The more recent GHC 6.4 uses a new
 package / library management system (Cabal) which required some substantial
-changes to HBDD, and so may not be completely stable.
+changes to hBDD, and so may not be completely stable.
 
 	http://haskell.org/ghc/
 
@@ -25,7 +25,7 @@ You may also wish to compile and install the Long/CMU BDD package:
 
 	http://www-2.cs.cmu.edu/~modelcheck/bdd.html
 
-CUDD is included with HBDD:
+CUDD is included with hBDD:
 
 	http://vlsi.colorado.edu/~fabio/
 
@@ -44,7 +44,7 @@ and haddock:
 To hack the build system, you'll need a recent autoconf (2.54 or later
 should be fine; earlier versions probably not).
 
-If you find you need these packages to simply build HBDD, this is a
+If you find you need these packages to simply build hBDD, this is a
 bug. Please notify us and we will fix it.
 
 * Simple install procedure
@@ -73,10 +73,10 @@ Please read:
 
 for other options, most of which are standard or self-explanatory.
 
-After installation HBDD relies on the originally installed BuDDy and
+After installation hBDD relies on the originally installed BuDDy and
 CMU/Long libraries - these cannot be moved or deleted. The CUDD libraries
-are installed in the HBDD library directory, so you can simply delete the
-entire HBDD source tree after installation if you are using that package.
+are installed in the hBDD library directory, so you can simply delete the
+entire hBDD source tree after installation if you are using that package.
 
 * BuDDy
 
@@ -103,14 +103,14 @@ You can use an alternative version or installation of the library:
 
    % ./configure --with-cudd=<src location> ...
 
-HBDD will build CUDD as part of building the cudd directory. In other words,
+hBDD will build CUDD as part of building the cudd directory. In other words,
 after adjusting the Makefile you should be able to just "make" and "make
 install".
 
 * The CMU/Long BDD Package
 
 To install it, just build and install the contents of the "mem" and "bdd"
-subdirectories - HBDD does not require the other things.
+subdirectories - hBDD does not require the other things.
 
 * Mac OS X issues
 
