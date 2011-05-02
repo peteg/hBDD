@@ -1,0 +1,7 @@
+CUDD lacks an install target and a configure script, and so needs to be
+setup by hand for your particular system. Examine:
+
+	<hbdd toplevel>/cudd-2.4.1/Makefile
+
+and adjust the compiler flags for your system. The defaults work fine on
+Debian GNU/Linux x86 for me. I use the one from Macports under OS X.

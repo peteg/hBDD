@@ -1,0 +1,10 @@
+On OS X, there is no dylib, so no GHCi. You can create these by hand:
+
+In the BDD library distribution's mem/
+gcc -arch i386 -I<include path> -L<library path> -O *.c -shared -fPIC -o libmem.dylib
+(copy libmem.dylib into a library directory)
+
+In the BDD library distribution's bddlib/
+gcc -arch i386 -I<include path> -L<library path> -lmem -O *.c -shared -fPIC -o libbdd.dylib
+(copy libbdd.dylib into a library directory)
+
