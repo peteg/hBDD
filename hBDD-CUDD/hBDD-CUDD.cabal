@@ -18,7 +18,7 @@ Extra-source-files: im/cudd_im.c im/cudd_im.h
 
 Library
   build-Tools: c2hs
-  build-depends: base, containers, hBDD == 0.0.1, unix
+  build-depends: base, containers, deepseq, hBDD == 0.0.1, unix
   extensions: ForeignFunctionInterface TypeFamilies
   exposed-modules: Data.Boolean.CUDD
   includes: stdio.h cudd.h

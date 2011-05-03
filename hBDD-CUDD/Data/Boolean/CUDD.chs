@@ -27,8 +27,8 @@ module Data.Boolean.CUDD
 
 #include "cudd_im.h"
 
+import Control.DeepSeq  ( NFData )
 import Control.Monad	( liftM, zipWithM_ )
-
 import Data.IORef	( IORef, newIORef, readIORef, writeIORef )
 import Data.Map         ( Map )
 import qualified Data.Map as Map
@@ -103,6 +103,9 @@ cFromEnum  = fromIntegral . fromEnum
 {#pointer *DdNode as BDD foreign newtype#}
 
 withBDD :: BDD -> (Ptr BDD -> IO a) -> IO a
+
+-- BDDs are just pointers, so there's no work to do when we @deepseq@ them.
+instance Control.DeepSeq.NFData BDD
 
 -- Belt-and-suspenders equality checking and ordering.
 instance Eq BDD where

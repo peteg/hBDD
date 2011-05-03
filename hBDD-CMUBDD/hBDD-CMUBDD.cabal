@@ -18,7 +18,7 @@ Extra-Source-Files: README
 
 Library
   build-Tools: c2hs
-  build-depends: base, containers, hBDD == 0.0.1, unix
+  build-depends: base, containers, deepseq, hBDD == 0.0.1, unix
   extensions: ForeignFunctionInterface TypeFamilies
   exposed-modules: Data.Boolean.CMUBDD
   includes: bdduser.h, memuser.h
