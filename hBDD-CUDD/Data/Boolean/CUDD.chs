@@ -30,6 +30,7 @@ module Data.Boolean.CUDD
 import Control.DeepSeq  ( NFData )
 import Control.Monad	( liftM, zipWithM_ )
 import Data.IORef	( IORef, newIORef, readIORef, writeIORef )
+
 import Data.Map         ( Map )
 import qualified Data.Map as Map
 
@@ -136,6 +137,7 @@ ddmanager = unsafePerformIO $
 
 -- | A map to and from BDD variable numbers.
 -- FIXME: get the right numeric type here.
+-- FIXME: the second one would be more efficiently Data.IntMap, but we don't use it often.
 type VarMap = (Map String CInt, Map CInt String)
 
 -- | Tracks existing variables.
@@ -181,9 +183,13 @@ instance BooleanVariable BDD where
     bvar label = unsafePerformIO $
       snd `liftM` newVar label ({#call unsafe Cudd_bddNewVar as _cudd_bddNewVar#} ddmanager)
 
-    bvarPair (l, l') = unsafePerformIO $
-     do (vid,  v)  <- newVar l  ({#call unsafe Cudd_bddNewVar as _cudd_bddNewVar#} ddmanager)
-        (vid', v') <- newVar l' ({#call unsafe Cudd_bddNewVar as _cudd_bddNewVar#} ddmanager)
+    bvars labels =
+      case labels of
+        [] -> []
+        l : ls -> unsafePerformIO $
+          do v  <- newVar l  ({#call unsafe Cudd_bddNewVar as _cudd_bddNewVar#} ddmanager)
+             vs <- mapM (\l' -> newVar l' ({#call unsafe Cudd_bddNewVar as _cudd_bddNewVar#} ddmanager)) ls
+             return (map snd (v : vs))
 --        (vid', v') <- newVar l' (allocAfter vid)
 
         -- FIXME group vid vid'
@@ -194,8 +200,7 @@ instance BooleanVariable BDD where
 --              let uvid = (fromIntegral . toInteger) vid
 --              makeTreeNode ddmanager uvid 2 (cFromEnum CUDD_MTR_DEFAULT)
 --              return ()
-
-        return (v, v')
+--         return (v, v')
      where
         allocAfter vid =
 	  do level <- readPerm ddmanager (cToNum (vid :: Integer))

@@ -1,5 +1,5 @@
 Name: hBDD-CUDD
-Version: 0.0.1
+Version: 0.0.2
 Cabal-version: >= 1.2
 Build-type: Simple
 Copyright: (C) 2002-2005, 2009 University of New South Wales, (C) 2009-2011 Peter Gammie
@@ -18,7 +18,7 @@ Extra-source-files: im/cudd_im.c im/cudd_im.h
 
 Library
   build-Tools: c2hs
-  build-depends: base, containers, deepseq, hBDD == 0.0.1, unix
+  build-depends: base, containers, deepseq, hBDD == 0.0.2, unix
   extensions: ForeignFunctionInterface TypeFamilies
   exposed-modules: Data.Boolean.CUDD
   includes: stdio.h cudd.h

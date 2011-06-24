@@ -58,7 +58,7 @@ module Data.Boolean
 -- 'Eq'. This instance is expected to provide /semantic/ equality on
 -- boolean functions, as is typical of BDD packages, but we sometimes
 -- violate this intentionally (e.g. 'BF').
-class (Eq b, Show b) => BooleanConstant b where
+class BooleanConstant b where
     false :: b
     true :: b
 
@@ -66,11 +66,11 @@ class (Eq b, Show b) => BooleanConstant b where
 class BooleanVariable b where
     -- | A single variable.
     bvar :: String -> b
-    -- | A pair of variables, notionally \'adjacent\'. What this means
+    -- | A set of variables, notionally \'adjacent\'. What this means
     -- is implementation-defined, but the intention is the classic
     -- (current, next)-state variable pairing optimisation.
-    bvarPair :: (String, String) -> (b, b)
-    bvarPair (l, l') = (bvar l, bvar l')
+    bvars :: [String] -> [b]
+    bvars = map bvar
 
     -- | Reverse mapping.
     unbvar :: b -> String
@@ -81,7 +81,7 @@ class BooleanVariable b where
 --
 -- These functions are expected to be /strict/; lazy variants
 -- are provided by '/\', etc.
-class BooleanConstant b => Boolean b where
+class (BooleanConstant b, Eq b) => Boolean b where
     bAND :: b -> b -> b
     bNEG :: b -> b
 

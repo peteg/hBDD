@@ -68,10 +68,10 @@ handleToCFile h =
        fd <- handleToFd h
        {#call unsafe fdopen#} (fromIntegral $ toInteger fd) modestr
     where mode :: Bool -> Bool -> String
-	  mode False False = error "Handle not readable or writable!"
-	  mode False True  = "w"
-	  mode True  False = "r"
-	  mode True  True  = "r+" -- FIXME
+          mode False False = error "Handle not readable or writable!"
+          mode False True  = "w"
+          mode True  False = "r"
+          mode True  True  = "r+" -- FIXME
 
 cToNum :: (Num i, Integral e) => e -> i
 cToNum  = fromIntegral . toInteger
@@ -190,22 +190,26 @@ newVar label allocVar =
           Just vid ->
               {#call unsafe bdd_var_with_id#} bdd_manager vid >>= addBDDfinalizer
           Nothing  -> do bdd <- allocVar >>= addBDDfinalizer
-			 vid <- withBDD bdd $ {#call unsafe bdd_if_id#} bdd_manager
-			 writeIORef bdd_vars (Map.insert label vid toBDD,
-					      Map.insert vid label fromBDD)
--- 			 putStrLn $ label ++ " -> " ++ show (vid, bdd)
-			 return bdd
+                         vid <- withBDD bdd $ {#call unsafe bdd_if_id#} bdd_manager
+                         writeIORef bdd_vars (Map.insert label vid toBDD,
+                                              Map.insert vid label fromBDD)
+--                       putStrLn $ label ++ " -> " ++ show (vid, bdd)
+                         return bdd
 
 instance BooleanVariable BDD where
     bvar label = unsafePerformIO $
       newVar label $ {#call unsafe bdd_new_var_last#} bdd_manager
 
-    bvarPair (label, label') = unsafePerformIO $
-      do bdd <- newVar label $ {#call unsafe bdd_new_var_last#} bdd_manager
-         -- Add the second var after the first one, and make them
-         -- belong to the same variable block.
-         bdd' <- newVar label' (allocAdjVar bdd)
-         return (bdd, bdd')
+    bvars labels =
+      case labels of
+        [] -> []
+        l : ls -> unsafePerformIO $
+          do bdd <- newVar l $ {#call unsafe bdd_new_var_last#} bdd_manager
+             -- Add the other variables after the first one, and make
+             -- them belong to the same variable block.
+             -- FIXME unclear if the relative order of the variables matters.
+             bdds <- mapM (\l' -> newVar l' (allocAdjVar bdd)) ls
+             return (bdd : bdds)
       where allocAdjVar bdd =
               do bdd1 <- withBDD bdd $
                         {#call unsafe bdd_new_var_after#} bdd_manager
@@ -214,11 +218,11 @@ instance BooleanVariable BDD where
                  return bdd1
 
     unbvar bdd = unsafePerformIO $
-		 do vid <- withBDD bdd $ {#call unsafe bdd_if_id#} bdd_manager
-		    (_, fromBDD) <- readIORef bdd_vars
-		    return $ case vid `Map.lookup` fromBDD of
-			       Nothing -> "(VID: " ++ show vid ++ ")"
-			       Just v  -> v
+                 do vid <- withBDD bdd $ {#call unsafe bdd_if_id#} bdd_manager
+                    (_, fromBDD) <- readIORef bdd_vars
+                    return $ case vid `Map.lookup` fromBDD of
+                               Nothing -> "(VID: " ++ show vid ++ ")"
+                               Just v  -> v
 
 instance Boolean BDD where
     bAND  = bddBinOp {#call unsafe bdd_and#}
@@ -270,7 +274,7 @@ instance BooleanOps BDD where
 --     bprint = longbdd_print
     reduce = longbdd_reduce
     satisfy = longbdd_satisfy
---     support = longbdd_support 
+--     support = longbdd_support
 
 bddUnaryOp :: (BDDManager -> (Ptr BDD) -> IO (Ptr BDD)) -> BDD -> BDD
 bddUnaryOp op x = unsafePerformIO $
@@ -292,9 +296,9 @@ longbdd_mkGroup vars = unsafePerformIO $
        liftM MkGroup $ addAssocFinalizer gid
   where pokeSubst :: Ptr (Ptr BDD) -> BDD -> Int -> IO ()
         pokeSubst ptr (BDD v) i =
-	  v `seq` pokeElemOff ptr i (unsafeForeignPtrToPtr v)
+          v `seq` pokeElemOff ptr i (unsafeForeignPtrToPtr v)
 
-	len = length vars
+        len = length vars
 
 longbdd_exists :: Group BDD -> BDD -> BDD
 longbdd_exists group bdd = unsafePerformIO $ bdd `seq`
@@ -322,14 +326,14 @@ longbdd_mkSubst pairs = unsafePerformIO $
        pokeElemOff assoc (2*len) nullPtr
        aid <- bdd_new_assoc bdd_manager (castPtr assoc) 1
        mapM_ (\ (BDD v, BDD f) -> do touchForeignPtr v
-	 	                     touchForeignPtr f) pairs
+                                     touchForeignPtr f) pairs
        liftM MkSubst $ addAssocFinalizer aid
     where pokeSubst :: Ptr (Ptr BDD) -> (BDD, BDD) -> Int -> IO ()
-	  pokeSubst ptr (v, f) i =
-	      do withBDD v $ pokeElemOff ptr (2*i)
-		 withBDD f $ pokeElemOff ptr (2*i+1)
+          pokeSubst ptr (v, f) i =
+              do withBDD v $ pokeElemOff ptr (2*i)
+                 withBDD f $ pokeElemOff ptr (2*i+1)
 
-	  len = length pairs
+          len = length pairs
 
 -- | Substitutes some BDDs for some variables.
 longbdd_substitute :: Subst BDD -> BDD -> BDD
@@ -344,15 +348,15 @@ bdd_print :: Handle -> BDD -> IO ()
 bdd_print handle bdd =
     do cfile <- handleToCFile handle
        withBDD bdd $ \bdd' -> {#call unsafe bdd_print_bdd#} bdd_manager bdd'
-				     namingFn nullFunPtr nullPtr
-				     cfile
+                                     namingFn nullFunPtr nullPtr
+                                     cfile
     where namingFn = nullFunPtr
 --     where namingFn = mkNamingFn (\_ f _ -> newCString $ unbvar f)
 
 -- Converts Haskell "naming functions" to C ones. (see the BDD manpage).
 -- foreign import ccall "wrapper"
 --     mkNamingFn :: Ptr BDDManager -> BDD -> a -> IO CString
--- 	       -> IO (FunPtr (Ptr BDDManager -> BDD -> a -> IO CString))
+--             -> IO (FunPtr (Ptr BDDManager -> BDD -> a -> IO CString))
 
 longbdd_reduce :: BDD -> BDD -> BDD
 longbdd_reduce f g = unsafePerformIO $
@@ -373,19 +377,19 @@ bdd_support bdd = unsafePerformIO $
   do (vm, _) <- readIORef bdd_vars
      allocaArray0 (Map.size vm) $ \vars_array -> withBDD bdd $ \bdd' ->
        do {#call unsafe bdd_support as long_bdd_support#} bdd_manager bdd' vars_array
- 	  support_vars <- peekArray0 nullPtr (castPtr vars_array)
-	  mapM addBDDfinalizer support_vars
+          support_vars <- peekArray0 nullPtr (castPtr vars_array)
+          mapM addBDDfinalizer support_vars
 
 -- | Performs a garbage collection (one in Haskell followed by one
 -- in the BDD library).
 gc :: IO ()
 gc = do performGC
-	{#call unsafe bdd_gc#} bdd_manager
+        {#call unsafe bdd_gc#} bdd_manager
 
 -- | Writes out some statistics from the BDD library.
 stats :: Handle -> IO ()
 stats handle = do cfile <- handleToCFile handle
-		  {#call unsafe bdd_stats#} bdd_manager cfile
+                  {#call unsafe bdd_stats#} bdd_manager cfile
 
 ----------------------------------------
 -- Variable Reordering.
@@ -415,11 +419,11 @@ dynamicReOrdering rom =
 
 varIndices :: IO [(CLong, CLong, String)]
 varIndices = do (toBDD, _fromBDD) <- readIORef bdd_vars
-		mapM procVar $ Map.toList toBDD
+                mapM procVar $ Map.toList toBDD
     where procVar :: (String, CLong) -> IO (CLong, CLong, String)
-	  procVar (var, vid) =
-	      do vindex <- withBDD (bvar var) $ {#call unsafe bdd_if_index#} bdd_manager
-	         return (vindex, vid, var)
+          procVar (var, vid) =
+              do vindex <- withBDD (bvar var) $ {#call unsafe bdd_if_index#} bdd_manager
+                 return (vindex, vid, var)
 {-# NOINLINE varIndices #-}
 
 ----------------------------------------
