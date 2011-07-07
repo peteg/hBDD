@@ -28,7 +28,7 @@ module Data.Boolean
     ,	BooleanOps(..)
 
     -- * Lazy boolean operators.
-    ,	(/\), nand, (\/), nor, xor, xnor
+    ,	(/\), nand, (\/), nor, xor
     ,	(?), (-->), (<--), (<->), neg
 
     -- * Higher-order (derived) boolean operators.
@@ -66,9 +66,9 @@ class BooleanConstant b where
 class BooleanVariable b where
     -- | A single variable.
     bvar :: String -> b
-    -- | A set of variables, notionally \'adjacent\'. What this means
-    -- is implementation-defined, but the intention is the classic
-    -- (current, next)-state variable pairing optimisation.
+    -- | A set of variables, notionally \'adjacent\'. What
+    -- this means is implementation-defined, but the intention is the
+    -- classic (current, next)-state variable pairing optimisation.
     bvars :: [String] -> [b]
     bvars = map bvar
 
@@ -76,7 +76,7 @@ class BooleanVariable b where
     unbvar :: b -> String
 
 -- | The overloaded Boolean operations proper. Provides defaults for
--- operations with obvious expansions, such as 'xnor'. A minimal instance
+-- operations with obvious expansions, such as 'bIFF'. A minimal instance
 -- should define 'bAND' and 'bNEG'.
 --
 -- These functions are expected to be /strict/; lazy variants
@@ -93,17 +93,15 @@ class (BooleanConstant b, Eq b) => Boolean b where
     x `bNOR` y = bNEG (x `bOR` y)
     bXOR :: b -> b -> b
     x `bXOR` y = (x \/ y) /\ (neg (x /\ y))
-    bXNOR :: b -> b -> b
-    x `bXNOR` y = bNEG (x `bXOR` y)
-    -- | If-then-else.
+    -- | If-then-else
     bITE :: b -> b -> b -> b
     bITE i t e = (i `bAND` t) `bOR` ((bNEG i) `bAND` e)
-    -- | Implication.
+    -- | Implication
     bIMP :: b -> b -> b
     x `bIMP` y = (bNEG x) `bOR` y
-    -- | If-and-only-if.
+    -- | If-and-only-if is exclusive nor.
     bIFF :: b -> b -> b
-    x `bIFF` y = (x `bIMP` y) `bAND` (y `bIMP` x)
+    x `bIFF` y = bNEG (x `bXOR` y)
 
 -- | Quantified Boolean Formulae (QBF) operations.
 class (Boolean b, BooleanVariable b) => QBF b where
@@ -228,11 +226,6 @@ x `xor` y
     | y == true  = neg x
     | otherwise  = x `bXOR` y
 {-# INLINE xor #-}
-
--- | Lazy exclusive-not-or.
-xnor :: Boolean b => b -> b -> b
-xnor = bXNOR
-{-# INLINE xnor #-}
 
 -- | Lazy if-then-else.
 (?) :: Boolean b => b -> (b, b) -> b

@@ -1,9 +1,8 @@
 /*
  * Some extra functions for CUDD.
  *
- * Peter Gammie, peteg42 at gmail dot com
- * (C)opyright 2005, 2009 UNSW
- *
+ * (C)opyright 2005, 2009 University of New South Wales
+ * (C)opyright 2009-2011 Peter Gammie, peteg42 at gmail dot com
  * Licence: LGPL
  *
  * "satone" is borrowed lock-stock from JavaBDD,
@@ -61,7 +60,7 @@ typedef enum {
     CUDD_MTR_NEWNODE  = MTR_NEWNODE
 } CuddMTRParams;
 
-/* Small hack to make atomic refcounting a bit easier. */
+/* The binary operations CUDD supports. */
 typedef enum {
     AND,
     XOR,

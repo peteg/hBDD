@@ -230,7 +230,7 @@ instance Boolean BDD where
     bOR   = bddBinOp {#call unsafe bdd_or#}
     bNOR  = bddBinOp {#call unsafe bdd_nor#}
     bXOR  = bddBinOp {#call unsafe bdd_xor#}
-    bXNOR = bddBinOp {#call unsafe bdd_xnor#}
+    bIFF  = bddBinOp {#call unsafe bdd_xnor#}
 
     bITE i t e = unsafePerformIO $
       withBDD i $ \ip -> withBDD t $ \tp -> withBDD e $ \ep ->
@@ -238,8 +238,6 @@ instance Boolean BDD where
 
     -- It seems bdd_implies computes something like x /\ ~y == ~(x -> y) ??
     -- ...so we just use the default: x ==> y = (neg x) \/ y
-
-    x `bIFF` y = bITE x y (bNEG y)
 
     bNEG x = unsafePerformIO $
       withBDD x ({#call unsafe bdd_not#} bdd_manager) >>= addBDDfinalizer

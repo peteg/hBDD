@@ -10,11 +10,11 @@
 -------------------------------------------------------------------
 module Data.Boolean.CUDD
     (
-    	BDD
+        BDD
     ,	module Data.Boolean
 
         -- * CUDD-specific functions
--- 	    ,	gc
+--          ,	gc
     ,	stats
     ,	dynamicReOrdering
     ,	varIndices
@@ -28,8 +28,11 @@ module Data.Boolean.CUDD
 #include "cudd_im.h"
 
 import Control.DeepSeq  ( NFData )
-import Control.Monad	( liftM, zipWithM_ )
+import Control.Monad	( liftM, mapAndUnzipM, zipWithM_ )
+
 import Data.IORef	( IORef, newIORef, readIORef, writeIORef )
+import Data.List	( genericLength )
+import Data.Maybe	( fromJust, isJust )
 
 import Data.Map         ( Map )
 import qualified Data.Map as Map
@@ -61,12 +64,12 @@ handleToCFile h =
        w <- hIsWritable h
        modestr <- newCString $ mode r w
        fd <- handleToFd h
-       {#call unsafe fdopen#} (fromIntegral $ toInteger fd) modestr
+       {#call unsafe fdopen#} (cToNum fd) modestr
     where mode :: Bool -> Bool -> String
-	  mode False False = error "Handle not readable or writable!"
-	  mode False True  = "w"
-	  mode True  False = "r"
-	  mode True  True  = "r+" -- FIXME
+          mode False False = error "Handle not readable or writable!"
+          mode False True  = "w"
+          mode True  False = "r"
+          mode True  True  = "r+" -- FIXME
 
 -- | The Haskell Handle is unusable after calling 'handleToCFile',
 -- so provide a neutered "fprintf"-style thing here.
@@ -78,7 +81,7 @@ printCFile file str =
 -- - FIXME: throw exception on error.
 -- closeCFile :: FILE -> IO ()
 -- closeCFile cfile = do {#call unsafe fclose#} cfile
--- 		      return ()
+--                    return ()
 
 cToNum :: (Num i, Integral e) => e -> i
 cToNum  = fromIntegral . toInteger
@@ -136,9 +139,8 @@ ddmanager = unsafePerformIO $
 {-# NOINLINE ddmanager #-}
 
 -- | A map to and from BDD variable numbers.
--- FIXME: get the right numeric type here.
 -- FIXME: the second one would be more efficiently Data.IntMap, but we don't use it often.
-type VarMap = (Map String CInt, Map CInt String)
+type VarMap = (Map String BDD, Map CUInt String)
 
 -- | Tracks existing variables.
 bdd_vars :: IORef VarMap
@@ -154,14 +156,10 @@ addBDDfinalizer bddp = liftM BDD $ newConcForeignPtr bddp bddf
                    >> return ()
 {-# INLINE addBDDfinalizer #-}
 
--- | Attaches a null finalizer to a BDD object.
+-- | Attaches a null finalizer to a 'BDD' object.
 -- Used for variables and constants.
--- The call to "Cudd_Ref" should be innocuous as the manual claims refcounts
--- on these objects are always > 0. FIXME verify.
 addBDDnullFinalizer :: Ptr BDD -> IO BDD
-addBDDnullFinalizer bddp =
-    do {#call unsafe Cudd_Ref as _cudd_Ref#} bddp
-       liftM BDD $ newForeignPtr_ bddp
+addBDDnullFinalizer bddp = fmap BDD $ newForeignPtr_ bddp
 {-# INLINE addBDDnullFinalizer #-}
 
 -- Simulate an "apply" function to simplify atomic refcount incrementing.
@@ -177,87 +175,49 @@ instance BooleanConstant BDD where
                 >>= addBDDnullFinalizer
     false = unsafePerformIO $
               {#call unsafe Cudd_ReadLogicZero as _cudd_ReadLogicZero#} ddmanager
-		>>= addBDDnullFinalizer
+                >>= addBDDnullFinalizer
+
+-- | Allocate a variable.
+newVar :: IO (Ptr BDD) -> String -> IO (Maybe CUInt, BDD)
+newVar allocVar label =
+      do (toBDD, fromBDD) <- readIORef bdd_vars
+         case label `Map.lookup` toBDD of
+           Just bdd -> return (Nothing, bdd)
+           Nothing ->
+             do putStrLn $ "Allocating: " ++ label
+                bddp <- allocVar
+                vid <- fmap cToNum $
+                         {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#} bddp
+                --putStrLn $ label ++ " -> " ++ (show (vid, bdd))
+                bdd <- addBDDnullFinalizer bddp
+                writeIORef bdd_vars ( Map.insert label bdd   toBDD
+                                    , Map.insert vid   label fromBDD )
+                return (Just vid, bdd)
 
 instance BooleanVariable BDD where
     bvar label = unsafePerformIO $
-      snd `liftM` newVar label ({#call unsafe Cudd_bddNewVar as _cudd_bddNewVar#} ddmanager)
+      fmap snd $ newVar ({#call unsafe Cudd_bddNewVar as _cudd_bddNewVar#} ddmanager)  label
 
     bvars labels =
       case labels of
         [] -> []
-        l : ls -> unsafePerformIO $
-          do v  <- newVar l  ({#call unsafe Cudd_bddNewVar as _cudd_bddNewVar#} ddmanager)
-             vs <- mapM (\l' -> newVar l' ({#call unsafe Cudd_bddNewVar as _cudd_bddNewVar#} ddmanager)) ls
-             return (map snd (v : vs))
---        (vid', v') <- newVar l' (allocAfter vid)
-
-        -- FIXME group vid vid'
-        -- putStrLn $ "bvarPair: " ++ show (l, l') ++ " -> " ++ show (vid, vid')
-
---         when (vid' - vid == 1) $
---           do putStrLn ">> Grouping vars"
---              let uvid = (fromIntegral . toInteger) vid
---              makeTreeNode ddmanager uvid 2 (cFromEnum CUDD_MTR_DEFAULT)
---              return ()
---         return (v, v')
-     where
-        allocAfter vid =
-	  do level <- readPerm ddmanager (cToNum (vid :: Integer))
-	     bddp' <- newVarAtLevel ddmanager (level + 1)
-	     return bddp'
-
-	readPerm = {#call unsafe Cudd_ReadPerm as _cudd_ReadPerm#}
+        ls -> unsafePerformIO $
+          do (vids, vars) <- mapAndUnzipM (newVar ({#call unsafe Cudd_bddNewVar as _cudd_bddNewVar#} ddmanager)) ls
+             if all isJust vids
+               then groupVars (fromJust (head vids)) (genericLength vids)
+               else putStrLn $ "hBDD-CUDD warning: not grouping variables " ++ show ls
+             return vars
+      where
+        groupVars vid len = makeTreeNode ddmanager vid len (cFromEnum CUDD_MTR_DEFAULT) >> return ()
         makeTreeNode = {#call unsafe Cudd_MakeTreeNode as _cudd_MakeTreeNode#}
-	newVarAtLevel = {#call unsafe Cudd_bddNewVarAtLevel as _cudd_bddNewVarAtLevel#}
-
-
-{-
-    -- FIXME: get the variable grouping right.
-    -- Are the variable groups adjusted when new variables are added using
-    -- newVarAtLevel? - I can't find anything in the CUDD source code that
-    -- indicates they are.
-    -- This code does the "adjacent" thing, but doesn't group variables.
-    bvarPair (l, l') = unsafePerformIO $ newVar l l' allocAfter
-        where
-
---  		 makeTreeNode ddmanager vid 2 (cFromEnum CUDD_MTR_DEFAULT)
---  		 vid' <- withBDD bdd readIndex
--- 		 putStrLn $ "TreeNode: alloc 2 at vid = " ++ show vid ++ " vid' = " ++ show vid'
--- 		 vid <- withBDD bdd {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#}
--- 		 level <- {#call unsafe Cudd_ReadPerm as _cudd_ReadPerm#} ddmanager ((fromIntegral . toInteger) vid)
---                  vid' <- {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#} bddp
--- 		 level' <- {#call unsafe Cudd_ReadPerm as _cudd_ReadPerm#} ddmanager ((fromIntegral . toInteger) vid')
--- 		 putStrLn $ "bvarAdj.alloc: old: " ++ show bdd ++ "(" ++ show level ++ ") new: " ++ label  ++ "(" ++ show level' ++ ")"
-
-
-	  readIndex = {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#}
--}
 
     unbvar bdd = unsafePerformIO $ bdd `seq`
-		   withBDD bdd $ \bddp ->
-		     do vid <- {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#} bddp
-			(_, fromBDD) <- readIORef bdd_vars
-			return $ case ((fromIntegral . toInteger) vid) `Map.lookup` fromBDD of
-			           Nothing -> "(VID: " ++ show vid ++ ")"
-				   Just v  -> v
-
-newVar :: String -> IO (Ptr BDD) -> IO (CInt, BDD)
-newVar label allocVar =
-      do (toBDD, fromBDD) <- readIORef bdd_vars
-         case label `Map.lookup` toBDD of
-           Just vid ->
-             {#call unsafe Cudd_bddIthVar as _cudd_bddIthVar#} ddmanager vid
-               >>= addBDDnullFinalizer >>= \v -> return (vid, v)
-           Nothing ->
-             do putStrLn $ "Allocating for: " ++ label
-                bddp <- allocVar
-		vid <- {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#} bddp
-                let svid = (fromIntegral . toInteger) vid
-		--putStrLn $ label ++ " -> " ++ (show (vid, bdd))
-		writeIORef bdd_vars ( Map.insert label svid  toBDD
-                                    , Map.insert svid  label fromBDD )
-		addBDDnullFinalizer bddp >>= \v -> return (svid, v)
+                   withBDD bdd $ \bddp ->
+                     do vid <- {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#} bddp
+                        (_, fromBDD) <- readIORef bdd_vars
+                        return $ case cToNum vid `Map.lookup` fromBDD of
+                                   Nothing -> "(VID: " ++ show vid ++ ")"
+                                   Just v  -> v
 
 instance Boolean BDD where
     bAND  = bddBinOp AND
@@ -265,14 +225,12 @@ instance Boolean BDD where
     bOR   = bddBinOp OR
     bNOR  = bddBinOp NOR
     bXOR  = bddBinOp XOR
-    bXNOR = bddBinOp XNOR
+    bIFF  = bddBinOp XNOR
 
     bITE i t e = unsafePerformIO $
       withBDD i $ \ip -> withBDD t $ \tp -> withBDD e $ \ep ->
         {#call unsafe cudd_bddIte#} ddmanager ip tp ep
           >>= addBDDfinalizer
-
-    x `bIFF` y = bITE x y (bNEG y)
 
     bNEG x = unsafePerformIO $
       withBDD x $ \xp ->
@@ -302,7 +260,7 @@ instance Substitution BDD where
 instance BooleanOps BDD where
     bif bdd = unsafePerformIO $
       do vid <- withBDD bdd {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#}
-         {#call unsafe Cudd_bddIthVar as _cudd_bddIthVar#} ddmanager ((fromIntegral . toInteger) vid)
+         {#call unsafe Cudd_bddIthVar as _cudd_bddIthVar#} ddmanager (cToNum vid)
            >>= addBDDnullFinalizer
     bthen bdd = unsafePerformIO $
       withBDD bdd $ \bddp ->
@@ -350,7 +308,7 @@ cudd_rename (MkSubst subst) f = unsafePerformIO $
       do zipWithM_ (pokeSubst arrayx arrayx') subst [0..]
          bddp <- {#call unsafe cudd_bddSwapVariables#} ddmanager fp arrayx arrayx' (fromIntegral len)
          mapM_ (\ (BDD v, BDD v') -> do touchForeignPtr v
-		                        touchForeignPtr v') subst
+                                        touchForeignPtr v') subst
          addBDDfinalizer bddp
     where
       pokeSubst :: Ptr (Ptr BDD) -> Ptr (Ptr BDD) -> (BDD, BDD) -> Int -> IO ()
@@ -394,7 +352,7 @@ stats handle =
 
 roMap :: [(ReorderingMethod, CUDDReorderingMethod)]
 roMap = [(ReorderSift, CUDD_REORDER_SIFT),
-	 (ReorderStableWindow3, CUDD_REORDER_WINDOW3)]
+         (ReorderStableWindow3, CUDD_REORDER_WINDOW3)]
 
 -- | Set the dynamic variable ordering heuristic.
 dynamicReOrdering :: ReorderingMethod -> IO ()
@@ -416,11 +374,14 @@ dynamicReOrdering rom =
 
 varIndices :: IO [(CInt, CInt, String)]
 varIndices = do (toBDD, _fromBDD) <- readIORef bdd_vars
-		mapM procVar $ Map.toList toBDD
-    where procVar :: (String, CInt) -> IO (CInt, CInt, String)
-	  procVar (var, vid) =
-	      do level <- {#call unsafe Cudd_ReadPerm as _cudd_ReadPerm#} ddmanager vid
-	         return (level, vid, var)
+                mapM procVar $ Map.toList toBDD
+    where -- procVar :: (String, BDD) -> IO (CUInt, CUInt, String)
+          procVar (var, bdd) =
+              do -- FIXME CUDD inconsistently uses signed and unsigned ints.
+                 vid <- fmap cToNum $
+                          withBDD bdd {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#}
+                 level <- {#call unsafe Cudd_ReadPerm as _cudd_ReadPerm#} ddmanager vid
+                 return (level, vid, var)
 {-# NOINLINE varIndices #-}
 
 ----------------------------------------
