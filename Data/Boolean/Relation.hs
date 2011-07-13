@@ -53,7 +53,7 @@ mkBinaryRelation d r cf
 --
 -- assuming that @domain@ and @range@ have the same length and @zs@
 -- are fresh.
-transitiveClosure :: BooleanOps b
+transitiveClosure :: BDDOps b
                   => BinaryRelation b -> BinaryRelation b
 transitiveClosure (MkBR {charFn = r, domain = xs, range = ys}) =
     MkBR {charFn = fix r f,

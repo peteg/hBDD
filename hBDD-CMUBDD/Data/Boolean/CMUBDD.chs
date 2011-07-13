@@ -20,7 +20,6 @@ module Data.Boolean.CMUBDD
     ,	gc
 
     ,	dynamicReOrdering
-    ,	bdd_support
     ,	varIndices
     ,	bddSize
     ,   bdd_print
@@ -264,7 +263,7 @@ instance Substitution BDD where
     rename = substitute -- FIXME implement
     substitute = longbdd_substitute
 
-instance BooleanOps BDD where
+instance BDDOps BDD where
     bif   = bddUnaryOp {#call unsafe bdd_if#}
     bthen = bddUnaryOp {#call unsafe bdd_then#}
     belse = bddUnaryOp {#call unsafe bdd_else#}
@@ -272,7 +271,7 @@ instance BooleanOps BDD where
 --     bprint = longbdd_print
     reduce = longbdd_reduce
     satisfy = longbdd_satisfy
---     support = longbdd_support
+    support = longbdd_support
 
 bddUnaryOp :: (BDDManager -> (Ptr BDD) -> IO (Ptr BDD)) -> BDD -> BDD
 bddUnaryOp op x = unsafePerformIO $
@@ -370,8 +369,8 @@ longbdd_satisfy bdd = unsafePerformIO $ bdd `seq`
 -------------------------------------------------------------------
 
 -- | Extracts the variables from a BDD.
-bdd_support :: BDD -> [BDD]
-bdd_support bdd = unsafePerformIO $
+longbdd_support :: BDD -> [BDD]
+longbdd_support bdd = unsafePerformIO $
   do (vm, _) <- readIORef bdd_vars
      allocaArray0 (Map.size vm) $ \vars_array -> withBDD bdd $ \bdd' ->
        do {#call unsafe bdd_support as long_bdd_support#} bdd_manager bdd' vars_array
@@ -406,6 +405,7 @@ dynamicReOrdering rom =
       )
 
 ----------------------------------------
+
 -- | Returns the relationship between BDD indices, BDD ids and variable
 -- names. This may be useful for discovering what the dynamic reordering
 -- is doing. (See the manpage for details about indices and ids.)
@@ -413,8 +413,6 @@ dynamicReOrdering rom =
 -- The intention of this function is to return
 --   @[(position in variable order, immutable variable id, label)]@
 -- so that the variable order can be saved.
-----------------------------------------
-
 varIndices :: IO [(CLong, CLong, String)]
 varIndices = do (toBDD, _fromBDD) <- readIORef bdd_vars
                 mapM procVar $ Map.toList toBDD

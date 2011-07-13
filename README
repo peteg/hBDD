@@ -7,17 +7,27 @@ with a purely functional interface, while still allowing access to the
 operational features (like variable re-ordering) via the IO monad.
 
 I have abandoned BuDDy support and am focussing on CUDD. The CMU/Long
-binding is of mostly historic interest.
+binding is of mostly historic interest and has only been lightly
+tested in recent years.
 
 * Installing
 
-See the file `INSTALL'.
+Install the CUDD and/or CMU/Long BDD packages.
+
+runghc Setup configure --user -p --enable-library-profiling --ghc-option=-auto-all --ghc-option=-caf-all
+runghc Setup build
+runghc Setup install
+
+You may need to use Cabal flags --extra-include-dirs and
+--extra-lib-dirs to point it at the location of the BDD libraries.
 
 * Documentation
 
 Haddock-generated documentation for the Haskell bindings can be found
 in the 'doc' directory. CMU/Long's manpage - bdd(3) - is also a source
-of valuable information. CUDD's implementation is quite readable.
+of valuable information. Also the documentation for CUDD is very
+readable (albeit obscure at times), and the implementation quite
+clean.
 
 * Copyleft
 

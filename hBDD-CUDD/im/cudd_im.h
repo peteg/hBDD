@@ -38,6 +38,12 @@
 
 /* Not CUDD-specific, but stuff it here for convenience. */
 inline void
+cFree(void *ptr)
+{
+  return free(ptr);
+}
+
+inline void
 fprintf_neutered(FILE *file, const char *str)
 {
     fprintf(file, "%s", str);

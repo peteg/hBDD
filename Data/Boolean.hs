@@ -25,7 +25,7 @@ module Data.Boolean
     ,	Boolean(..)
     ,	QBF(..)
     ,	Substitution(..)
-    ,	BooleanOps(..)
+    ,	BDDOps(..)
 
     -- * Lazy boolean operators.
     ,	(/\), nand, (\/), nor, xor
@@ -140,8 +140,8 @@ class (Boolean b, BooleanVariable b) => Substitution b where
     -- | Substitutes formulas for variables in a 'Boolean' formula.
     substitute :: Subst b -> b -> b
 
--- | Operations only provided by efficient (BDD) representations.
-class (QBF b, Substitution b) => BooleanOps b where
+-- | Operations provided by BDD representations.
+class (QBF b, Substitution b) => BDDOps b where
     -- | Extract the variable labelling the topmost node in /f/.
     bif :: b	-- ^ /f/
         -> b
@@ -161,6 +161,10 @@ class (QBF b, Substitution b) => BooleanOps b where
     -- | Finds a satisfying variable assignment for /f/.
     satisfy :: b	-- ^ /f/
             -> b
+
+    -- | Finds the set of variables that /f/ depends on.
+    support :: b	-- ^ /f/
+            -> [b]
 
 -------------------------------------------------------------------
 
@@ -282,7 +286,6 @@ fix s0 f = loop s0
            else loop s'
 
 -- | "fix" with state.
-
 fix2 :: Eq b => a -> b -> (a -> b -> (a, b)) -> (a, b)
 fix2 a0 s0 f = loop (a0, s0)
     where
@@ -296,14 +299,14 @@ fix2 a0 s0 f = loop (a0, s0)
 
 -- | Render a 'Boolean' type as a sum-of-products. This was stolen
 -- lock-stock from David Long's calculator example.
-sop :: (BooleanOps b, RenderBool a) => b -> (a -> a)
+sop :: (BDDOps b, RenderBool a) => b -> (a -> a)
 sop f0
     | f0 == true  = rbTrue
     | f0 == false = rbFalse
     | otherwise   = sop' f0
     where sop' f = let outside = neg f
                        cube = satisfy f
-                       f' = f /\ (neg cube)
+                       f' = f /\ neg cube
                     in (printCube $ reduce cube (outside \/ cube)) .
                        (if f' == false
                           then id
@@ -322,7 +325,7 @@ sop f0
                                (if cubeNext == true
                                   then id
                                   else rbAnd . printCube cubeNext)
-{-# SPECIALIZE sop :: BooleanOps b => b -> (String -> String) #-}
+{-# SPECIALIZE sop :: BDDOps b => b -> (String -> String) #-}
 
 -- | A class for the text constants and operators used by 'sop'.
 class RenderBool a where
@@ -344,7 +347,8 @@ instance RenderBool String where
 -------------------------------------------------------------------
 
 -- | An abstract syntax tree-ish instance of the 'Boolean' interface,
--- useful for debugging: shows the order in which operations are performed.
+-- sometimes useful for debugging.
+--
 -- Note the 'Eq' instance is /not/ semantic equality.
 data BF = BFtrue
         | BFfalse

@@ -28,7 +28,7 @@ module Data.Boolean.CUDD
 #include "cudd_im.h"
 
 import Control.DeepSeq  ( NFData )
-import Control.Monad	( liftM, mapAndUnzipM, zipWithM_ )
+import Control.Monad	( foldM, liftM, mapAndUnzipM, zipWithM_ )
 
 import Data.IORef	( IORef, newIORef, readIORef, writeIORef )
 import Data.List	( genericLength )
@@ -245,7 +245,7 @@ bddBinOp op x y = unsafePerformIO $
 instance QBF BDD where
     data Group BDD = MkGroup BDD
 
-    mkGroup = MkGroup . conjoin
+    mkGroup = MkGroup . conjoin -- FIXME maybe use Cudd_bddComputeCube
     exists = cudd_exists
     forall = cudd_forall
     rel_product = cudd_rel_product
@@ -257,7 +257,7 @@ instance Substitution BDD where
     rename = cudd_rename
     substitute = error "CUDD substitute" -- cudd_substitute
 
-instance BooleanOps BDD where
+instance BDDOps BDD where
     bif bdd = unsafePerformIO $
       do vid <- withBDD bdd {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#}
          {#call unsafe Cudd_bddIthVar as _cudd_bddIthVar#} ddmanager (cToNum vid)
@@ -271,12 +271,12 @@ instance BooleanOps BDD where
 
     reduce = cudd_reduce
     satisfy = cudd_satisfy
+    support = cudd_support
 
 -------------------------------------------------------------------
 -- Implementations.
 -------------------------------------------------------------------
 
--- FIXME move
 withGroup :: Group BDD -> (Ptr BDD -> IO a) -> IO a
 withGroup (MkGroup g) = withBDD g
 
@@ -322,13 +322,28 @@ cudd_rename (MkSubst subst) f = unsafePerformIO $
 cudd_reduce :: BDD -> BDD -> BDD
 cudd_reduce f g = unsafePerformIO $
   withBDD f $ \fp -> withBDD g $ \gp ->
-    {#call unsafe cudd_bddLICompaction#} ddmanager fp gp
+    {#call unsafe Cudd_bddLICompaction as _cudd_bddLICompaction#} ddmanager fp gp
       >>= addBDDfinalizer
 
 -- FIXME verify implementation.
 cudd_satisfy :: BDD -> BDD
 cudd_satisfy bdd = unsafePerformIO $
   withBDD bdd ({#call unsafe cudd_satone#} ddmanager) >>= addBDDfinalizer
+
+cudd_support :: BDD -> [BDD]
+cudd_support bdd = unsafePerformIO $
+  do varBitArray <- withBDD bdd ({#call unsafe Cudd_SupportIndex as _cudd_SupportIndex#} ddmanager)
+     -- The array is as long as the number of variables allocated.
+     (_toBDD, fromBDD) <- readIORef bdd_vars
+     bdds <- foldM (toBDDs varBitArray) [] (Map.toList fromBDD)
+     {#call unsafe cFree#} (castPtr varBitArray)
+     return bdds
+  where
+    toBDDs varBitArray bdds (vid, var) =
+      do varInSupport <- peek (advancePtr varBitArray (cToNum vid))
+         return $ if varInSupport /= 0
+                    then bvar var : bdds
+                    else bdds
 
 -------------------------------------------------------------------
 -- Operations specific to this BDD binding.
