@@ -1,6 +1,6 @@
 -------------------------------------------------------------------
 -- |
--- Module      :  Relation
+-- Module      :  Data.Boolean.Relation
 -- Copyright   :  (C) 2002-2005, 2009 University of New South Wales, (C) 2009-2011 Peter Gammie
 -- License     :  LGPL (see COPYING.LIB for details)
 --
@@ -20,6 +20,7 @@ module Data.Boolean.Relation
 -------------------------------------------------------------------
 -- Dependencies.
 -------------------------------------------------------------------
+
 import Data.Boolean
 
 -------------------------------------------------------------------

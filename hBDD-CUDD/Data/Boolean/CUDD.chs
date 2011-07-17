@@ -169,14 +169,6 @@ addBDDnullFinalizer bddp = fmap BDD $ newForeignPtr_ bddp
 -- Logical operations.
 -------------------------------------------------------------------
 
-instance BooleanConstant BDD where
-    true  = unsafePerformIO $
-              {#call unsafe Cudd_ReadOne as _cudd_ReadOne#} ddmanager
-                >>= addBDDnullFinalizer
-    false = unsafePerformIO $
-              {#call unsafe Cudd_ReadLogicZero as _cudd_ReadLogicZero#} ddmanager
-                >>= addBDDnullFinalizer
-
 -- | Allocate a variable.
 newVar :: IO (Ptr BDD) -> String -> IO (Maybe CUInt, BDD)
 newVar allocVar label =
@@ -220,22 +212,27 @@ instance BooleanVariable BDD where
                                    Just v  -> v
 
 instance Boolean BDD where
-    bAND  = bddBinOp AND
-    bNAND = bddBinOp NAND
-    bOR   = bddBinOp OR
-    bNOR  = bddBinOp NOR
-    bXOR  = bddBinOp XOR
-    bIFF  = bddBinOp XNOR
+    true  = bddConstant {#call unsafe Cudd_ReadOne as _cudd_ReadOne#}
+    false = bddConstant {#call unsafe Cudd_ReadLogicZero as _cudd_ReadLogicZero#}
 
-    bITE i t e = unsafePerformIO $
-      withBDD i $ \ip -> withBDD t $ \tp -> withBDD e $ \ep ->
-        {#call unsafe cudd_bddIte#} ddmanager ip tp ep
-          >>= addBDDfinalizer
+    (/\)  = bddBinOp AND
+    neg x = unsafePerformIO $ withBDD x $ \xp ->
+      {#call unsafe cudd_bddNot#} xp >>= addBDDfinalizer
 
-    bNEG x = unsafePerformIO $
-      withBDD x $ \xp ->
-        {#call unsafe cudd_bddNot#} xp
-          >>= addBDDfinalizer
+    nand  = bddBinOp NAND
+    (\/)  = bddBinOp OR
+    nor   = bddBinOp NOR
+    xor   = bddBinOp XOR
+    -- (-->) = FIXME ???
+    (<->) = bddBinOp XNOR
+
+    -- bITE i t e = unsafePerformIO $
+    --   withBDD i $ \ip -> withBDD t $ \tp -> withBDD e $ \ep ->
+    --     {#call unsafe cudd_bddIte#} ddmanager ip tp ep
+    --       >>= addBDDfinalizer
+
+bddConstant :: (DDManager -> IO (Ptr BDD)) -> BDD
+bddConstant f = unsafePerformIO $ f ddmanager >>= addBDDnullFinalizer
 
 bddBinOp :: CuddBinOp -> BDD -> BDD -> BDD
 bddBinOp op x y = unsafePerformIO $
