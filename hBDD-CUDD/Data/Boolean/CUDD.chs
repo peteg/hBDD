@@ -319,7 +319,7 @@ cudd_rename (MkSubst subst) f = unsafePerformIO $
 cudd_reduce :: BDD -> BDD -> BDD
 cudd_reduce f g = unsafePerformIO $
   withBDD f $ \fp -> withBDD g $ \gp ->
-    {#call unsafe Cudd_bddLICompaction as _cudd_bddLICompaction#} ddmanager fp gp
+    {#call unsafe cudd_bddLICompaction#} ddmanager fp gp
       >>= addBDDfinalizer
 
 -- FIXME verify implementation.
@@ -330,6 +330,7 @@ cudd_satisfy bdd = unsafePerformIO $
 cudd_support :: BDD -> [BDD]
 cudd_support bdd = unsafePerformIO $
   do varBitArray <- withBDD bdd ({#call unsafe Cudd_SupportIndex as _cudd_SupportIndex#} ddmanager)
+     touchForeignPtr (case bdd of BDD fp -> fp)
      -- The array is as long as the number of variables allocated.
      (_toBDD, fromBDD) <- readIORef bdd_vars
      bdds <- foldM (toBDDs varBitArray) [] (Map.toList fromBDD)
