@@ -176,12 +176,6 @@ withSubst (MkSubst g) = withAssoc g
 -- Logical operations.
 -------------------------------------------------------------------
 
-instance BooleanConstant BDD where
-   false = unsafePerformIO $
-             {#call unsafe bdd_zero#} bdd_manager >>= addBDDfinalizer
-   true  = unsafePerformIO $
-             {#call unsafe bdd_one#} bdd_manager >>= addBDDfinalizer
-
 newVar :: String -> IO (Ptr BDD) -> IO BDD
 newVar label allocVar =
       do (toBDD, fromBDD) <- readIORef bdd_vars
@@ -224,22 +218,26 @@ instance BooleanVariable BDD where
                                Just v  -> v
 
 instance Boolean BDD where
-    bAND  = bddBinOp {#call unsafe bdd_and#}
-    bNAND = bddBinOp {#call unsafe bdd_nand#}
-    bOR   = bddBinOp {#call unsafe bdd_or#}
-    bNOR  = bddBinOp {#call unsafe bdd_nor#}
-    bXOR  = bddBinOp {#call unsafe bdd_xor#}
-    bIFF  = bddBinOp {#call unsafe bdd_xnor#}
+  false = unsafePerformIO $
+             {#call unsafe bdd_zero#} bdd_manager >>= addBDDfinalizer
+  true  = unsafePerformIO $
+             {#call unsafe bdd_one#} bdd_manager >>= addBDDfinalizer
 
-    bITE i t e = unsafePerformIO $
-      withBDD i $ \ip -> withBDD t $ \tp -> withBDD e $ \ep ->
-        {#call unsafe bdd_ite#} bdd_manager ip tp ep >>= addBDDfinalizer
+  (/\)  = bddBinOp {#call unsafe bdd_and#}
+  neg x = unsafePerformIO $
+            withBDD x ({#call unsafe bdd_not#} bdd_manager) >>= addBDDfinalizer
+  nand  = bddBinOp {#call unsafe bdd_nand#}
+  (\/)  = bddBinOp {#call unsafe bdd_or#}
+  nor   = bddBinOp {#call unsafe bdd_nor#}
+  xor   = bddBinOp {#call unsafe bdd_xor#}
+  (<->) = bddBinOp {#call unsafe bdd_xnor#}
+
+    -- bITE i t e = unsafePerformIO $
+    --   withBDD i $ \ip -> withBDD t $ \tp -> withBDD e $ \ep ->
+    --     {#call unsafe bdd_ite#} bdd_manager ip tp ep >>= addBDDfinalizer
 
     -- It seems bdd_implies computes something like x /\ ~y == ~(x -> y) ??
     -- ...so we just use the default: x ==> y = (neg x) \/ y
-
-    bNEG x = unsafePerformIO $
-      withBDD x ({#call unsafe bdd_not#} bdd_manager) >>= addBDDfinalizer
 
 bddBinOp :: (BDDManager -> (Ptr BDD) -> (Ptr BDD) -> IO (Ptr BDD)) -> BDD -> BDD -> BDD
 bddBinOp op x y = unsafePerformIO $

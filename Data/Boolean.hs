@@ -30,31 +30,29 @@ module Data.Boolean
     ,	fix
     ,	fix2
 
-    -- * Convert a boolean formula to a displayable form.
-    ,	RenderBool(..)
-    ,	sop
-
     -- * BDD-specific operations.
     ,	BDDOps(..)
     ,	ReorderingMethod(..)
+    ,	RenderBool(..)
+    ,	sop
+    ,	countPaths
     ) where
 
 -------------------------------------------------------------------
 -- Type classes.
 -------------------------------------------------------------------
 
--- | FIXME document
-infixl 7 /\
-infixl 7 \/
-infixl 7 `nand`
-infixl 7 `nor`
-infixl 4 <->
-infixr 4 -->
-infixr 4 <--
-infixl 4 `xor`
+-- | The operators have similar fixities and associativies to the
+-- standard boolean operators, but at higher precedence (they bind
+-- more strongly).
+infixr 8 `xor`, `nand`, `nor`
+infixr 7 /\
+infixr 6 \/
+infixr 5 <->, -->
+infixl 5 <--
 
 -- | The overloaded Boolean operations proper. Provides defaults for
--- operations with obvious expansions, such as '(<->)'. A minimal
+-- operations with obvious expansions, such as 'nand'. A minimal
 -- instance should define '(/\)' and 'neg'.
 class Boolean b where
   false :: b
@@ -266,3 +264,12 @@ sop f0
                                   then rbEmpty
                                   else rbAnd `rbConcat` printCube cubeNext)
 {-# SPECIALIZE sop :: BDDOps b => b -> ShowS #-}
+
+-------------------------------------------------------------------
+
+-- | Count the number of paths in a BDD leading to 'true'.
+countPaths :: (BDDOps b) => b -> Integer
+countPaths f0
+  | f0 == true  = 1
+  | f0 == false = 0
+  | otherwise   = countPaths (bthen f0) + countPaths (belse f0)
