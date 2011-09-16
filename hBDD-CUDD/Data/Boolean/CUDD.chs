@@ -85,9 +85,11 @@ printCFile file str =
 
 cToNum :: (Num i, Integral e) => e -> i
 cToNum  = fromIntegral . toInteger
+{-# INLINE cToNum #-}
 
 cFromEnum :: (Integral i, Enum e) => e -> i
 cFromEnum  = fromIntegral . fromEnum
+{-# INLINE cFromEnum #-}
 
 -------------------------------------------------------------------
 -- Types.
@@ -107,6 +109,7 @@ cFromEnum  = fromIntegral . fromEnum
 {#pointer *DdNode as BDD foreign newtype#}
 
 withBDD :: BDD -> (Ptr BDD -> IO a) -> IO a
+{-# INLINE withBDD #-}
 
 -- BDDs are just pointers, so there's no work to do when we @deepseq@ them.
 instance Control.DeepSeq.NFData BDD
@@ -212,8 +215,8 @@ instance BooleanVariable BDD where
                                    Just v  -> v
 
 instance Boolean BDD where
-    true  = bddConstant {#call unsafe Cudd_ReadOne as _cudd_ReadOne#}
-    false = bddConstant {#call unsafe Cudd_ReadLogicZero as _cudd_ReadLogicZero#}
+    true  = cudd_constant {#call unsafe Cudd_ReadOne as _cudd_ReadOne#}
+    false = cudd_constant {#call unsafe Cudd_ReadLogicZero as _cudd_ReadLogicZero#}
 
     (/\)  = bddBinOp AND
     neg x = unsafePerformIO $ withBDD x $ \xp ->
@@ -231,16 +234,18 @@ instance Boolean BDD where
     --     {#call unsafe cudd_bddIte#} ddmanager ip tp ep
     --       >>= addBDDfinalizer
 
-bddConstant :: (DDManager -> IO (Ptr BDD)) -> BDD
-bddConstant f = unsafePerformIO $ f ddmanager >>= addBDDnullFinalizer
+cudd_constant :: (DDManager -> IO (Ptr BDD)) -> BDD
+cudd_constant f = unsafePerformIO $ f ddmanager >>= addBDDnullFinalizer
+{-# INLINE cudd_constant #-}
 
 bddBinOp :: CuddBinOp -> BDD -> BDD -> BDD
 bddBinOp op x y = unsafePerformIO $
   withBDD x $ \xp -> withBDD y $ \yp ->
     {#call unsafe cudd_BinOp#} ddmanager (cFromEnum op) xp yp >>= addBDDfinalizer
+{-# INLINE bddBinOp #-}
 
 instance QBF BDD where
-    data Group BDD = MkGroup BDD
+    data Group BDD = MkGroup !BDD
 
     mkGroup = MkGroup . conjoin -- FIXME maybe use Cudd_bddComputeCube
     exists = cudd_exists
@@ -248,11 +253,31 @@ instance QBF BDD where
     rel_product = cudd_rel_product
 
 instance Substitution BDD where
-    data Subst BDD = MkSubst [(BDD, BDD)]
+  -- Cache substitution arrays.
+  data Subst BDD = MkSubst {-# UNPACK #-} !Int
+                           {-# UNPACK #-} !(ForeignPtr (Ptr BDD))
+                           {-# UNPACK #-} !(ForeignPtr (Ptr BDD))
 
-    mkSubst = MkSubst
-    rename = cudd_rename
-    substitute = error "CUDD substitute" -- cudd_substitute
+  mkSubst = cudd_mkSubst
+  rename = cudd_rename
+  substitute = error "CUDD substitute" -- cudd_substitute
+
+cudd_mkSubst :: [(BDD, BDD)] -> Subst BDD
+cudd_mkSubst subst = unsafePerformIO $
+    do arrayx  <- mallocArray len
+       arrayx' <- mallocArray len
+       zipWithM_ (pokeSubst arrayx arrayx') subst [0..]
+       fpx  <- newForeignPtr finalizerFree arrayx
+       fpx' <- newForeignPtr finalizerFree arrayx'
+       return (MkSubst len fpx fpx')
+  where
+    pokeSubst :: Ptr (Ptr BDD) -> Ptr (Ptr BDD) -> (BDD, BDD) -> Int -> IO ()
+    pokeSubst arrayx arrayx' (v, v') i =
+      do withBDD v  $ pokeElemOff arrayx  i
+         withBDD v' $ pokeElemOff arrayx' i
+
+    len = length subst
+{-# INLINE cudd_mkSubst #-}
 
 instance BDDOps BDD where
     bif bdd = unsafePerformIO $
@@ -282,38 +307,31 @@ cudd_exists group bdd = unsafePerformIO $ bdd `seq`
   withGroup group $ \groupp -> withBDD bdd $ \bddp ->
     {#call unsafe cudd_bddExistAbstract#} ddmanager bddp groupp
       >>= addBDDfinalizer
+{-# INLINE cudd_exists #-}
 
 cudd_forall :: Group BDD -> BDD -> BDD
 cudd_forall group bdd = unsafePerformIO $ bdd `seq`
   withGroup group $ \groupp -> withBDD bdd $ \bddp ->
     {#call unsafe cudd_bddUnivAbstract#} ddmanager bddp groupp
       >>= addBDDfinalizer
+{-# INLINE cudd_forall #-}
 
 cudd_rel_product :: Group BDD -> BDD -> BDD -> BDD
 cudd_rel_product group f g = unsafePerformIO $
   withGroup group $ \groupp -> withBDD f $ \fp -> withBDD g $ \gp ->
     {#call unsafe cudd_bddAndAbstract#} ddmanager fp gp groupp
       >>= addBDDfinalizer
+{-# INLINE cudd_rel_product #-}
 
--- | FIXME: This function is a bit touchier than you'd hope.
--- The reaons is we use cudd_bddSwapVariables, which in fact swaps variables.
--- This is not exactly a "rename" behaviour.
+-- | This function swaps variables, as it uses
+-- @cudd_bddSwapVariables@. This is not exactly a "rename" behaviour.
 cudd_rename :: Subst BDD -> BDD -> BDD
-cudd_rename (MkSubst subst) f = unsafePerformIO $
+cudd_rename (MkSubst len fpx fpx') f = unsafePerformIO $
   withBDD f $ \fp ->
-    allocaArray len $ \arrayx -> allocaArray len $ \arrayx' ->
-      do zipWithM_ (pokeSubst arrayx arrayx') subst [0..]
-         bddp <- {#call unsafe cudd_bddSwapVariables#} ddmanager fp arrayx arrayx' (fromIntegral len)
-         mapM_ (\ (BDD v, BDD v') -> do touchForeignPtr v
-                                        touchForeignPtr v') subst
-         addBDDfinalizer bddp
-    where
-      pokeSubst :: Ptr (Ptr BDD) -> Ptr (Ptr BDD) -> (BDD, BDD) -> Int -> IO ()
-      pokeSubst arrayx arrayx' (v, v') i =
-        do withBDD v  $ pokeElemOff arrayx  i
-           withBDD v' $ pokeElemOff arrayx' i
-
-      len = length subst
+    withForeignPtr fpx $ \arrayx -> withForeignPtr fpx' $ \arrayx' ->
+      {#call unsafe cudd_bddSwapVariables#} ddmanager fp arrayx arrayx' (fromIntegral len)
+        >>= addBDDfinalizer
+{-# INLINE cudd_rename #-}
 
 -- FIXME verify implementation.
 cudd_reduce :: BDD -> BDD -> BDD
