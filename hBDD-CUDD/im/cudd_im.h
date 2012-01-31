@@ -50,6 +50,12 @@ fprintf_neutered(FILE *file, const char *str)
     fflush(file);
 }
 
+inline void
+print_stats(DdManager *dm)
+{
+  Cudd_PrintInfo(dm, stdout);
+}
+
 typedef enum {
     UNIQUE_SLOTS = CUDD_UNIQUE_SLOTS
 } CuddSubtableSize;

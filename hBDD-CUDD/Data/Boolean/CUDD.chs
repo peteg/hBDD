@@ -16,9 +16,11 @@ module Data.Boolean.CUDD
         -- * CUDD-specific functions
 --          ,	gc
     ,	stats
-    ,	dynamicReOrdering
+    ,	reorder
+    ,	dynamicReordering
     ,	varIndices
     ,	bddSize
+    ,	printInfo
     ) where
 
 -------------------------------------------------------------------
@@ -280,6 +282,7 @@ cudd_mkSubst subst = unsafePerformIO $
 {-# INLINE cudd_mkSubst #-}
 
 instance BDDOps BDD where
+    get_bdd_ptr bdd = unsafePerformIO $ withBDD bdd (return . ptrToIntPtr)
     bif bdd = unsafePerformIO $
       do vid <- withBDD bdd {#call unsafe Cudd_NodeReadIndex as _cudd_NodeReadIndex#}
          {#call unsafe Cudd_bddIthVar as _cudd_bddIthVar#} ddmanager (cToNum vid)
@@ -376,22 +379,24 @@ stats handle =
 
 ----------------------------------------
 -- Variable Reordering.
--- FIXME add an off switch
 ----------------------------------------
 
 {#enum Cudd_ReorderingType as CUDDReorderingMethod {} deriving (Eq, Ord, Show)#}
 
-roMap :: [(ReorderingMethod, CUDDReorderingMethod)]
-roMap = [(ReorderSift, CUDD_REORDER_SIFT),
-         (ReorderStableWindow3, CUDD_REORDER_WINDOW3)]
+decodeROM :: ReorderingMethod -> CInt
+decodeROM rom = cFromEnum $ case rom of
+  ReorderNone -> CUDD_REORDER_NONE
+  ReorderSift -> CUDD_REORDER_SIFT
+  ReorderSiftSym -> CUDD_REORDER_SYMM_SIFT
+  ReorderStableWindow3 -> CUDD_REORDER_WINDOW3
+
+-- | Reorder the variables now.
+reorder :: ReorderingMethod -> IO ()
+reorder rom = {#call unsafe Cudd_ReduceHeap as _cudd_ReduceHeap#} ddmanager (decodeROM rom) 1 >> return ()
 
 -- | Set the dynamic variable ordering heuristic.
-dynamicReOrdering :: ReorderingMethod -> IO ()
-dynamicReOrdering rom =
-    case lookup rom roMap of
-      Nothing -> error $ "CUDD.dynamicReOrdering: method not supported: " ++ show rom
-      Just brom ->
-        {#call unsafe Cudd_AutodynEnable as _cudd_AutodynEnable#} ddmanager (cFromEnum brom) >> return ()
+dynamicReordering :: ReorderingMethod -> IO ()
+dynamicReordering rom = {#call unsafe Cudd_AutodynEnable as _cudd_AutodynEnable#} ddmanager (decodeROM rom) >> return ()
 
 ----------------------------------------
 -- | Returns the relationship between BDD indices, BDD ids and
@@ -424,3 +429,6 @@ bddSize :: BDD -> Int
 bddSize bdd = unsafePerformIO $
   do size <- withBDD bdd ({#call unsafe Cudd_DagSize as _cudd_DagSize#})
      return $ cToNum size
+
+printInfo :: IO ()
+printInfo = {#call unsafe print_stats#} ddmanager

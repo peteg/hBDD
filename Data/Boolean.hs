@@ -39,6 +39,10 @@ module Data.Boolean
     ) where
 
 -------------------------------------------------------------------
+
+import Foreign.Ptr ( IntPtr )
+
+-------------------------------------------------------------------
 -- Type classes.
 -------------------------------------------------------------------
 
@@ -182,13 +186,16 @@ fix2 a0 s0 f = loop (a0, s0)
 -- Note that the 'Eq' instance is expected to provide /semantic/
 -- equality on boolean functions, as is typical of BDD packages.
 class (Eq b, QBF b, Substitution b) => BDDOps b where
-    -- | Extract the variable labelling the topmost node in /f/.
+    -- | Return a pointer to the underlying representation.
+    get_bdd_ptr :: b -> IntPtr
+
+    -- | Extracts the variable labelling the topmost node in /f/.
     bif :: b	-- ^ /f/
         -> b
-    -- | Extract the this-node-false-branch of a /f/.
+    -- | Extracts the this-node-false-branch of a /f/.
     belse :: b	-- ^ /f/
           -> b
-    -- | Extract the this-node-true-branch of a /f/.
+    -- | Extracts the this-node-true-branch of a /f/.
     bthen :: b	-- ^ /f/
           -> b
 
@@ -208,8 +215,12 @@ class (Eq b, QBF b, Substitution b) => BDDOps b where
 
 -- | BDD libraries tend to include some kind of variable reordering
 -- heuristics. These are some common ones.
-data ReorderingMethod = ReorderSift | ReorderStableWindow3
-                        deriving (Eq, Ord, Show)
+data ReorderingMethod
+  = ReorderNone -- ^ Switch off variable reordering.
+  | ReorderSift -- ^ Sifting
+  | ReorderSiftSym -- ^ Sifting with identification of symmetric variables
+  | ReorderStableWindow3 -- ^ Window permutation.
+  deriving (Eq, Ord, Show)
 
 -------------------------------------------------------------------
 

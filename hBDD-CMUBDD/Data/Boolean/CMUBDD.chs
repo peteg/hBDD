@@ -19,7 +19,7 @@ module Data.Boolean.CMUBDD
     ,	stats
     ,	gc
 
-    ,	dynamicReOrdering
+    ,	dynamicReordering
     ,	varIndices
     ,	bddSize
     ,   bdd_print
@@ -394,8 +394,8 @@ foreign import ccall "&" bdd_reorder_stable_window3 :: FunPtr (BDDManager -> IO 
 foreign import ccall "&" bdd_reorder_sift :: FunPtr (BDDManager -> IO ())
 
 -- | Set the dynamic variable ordering heuristic.
-dynamicReOrdering :: ReorderingMethod -> IO ()
-dynamicReOrdering rom =
+dynamicReordering :: ReorderingMethod -> IO ()
+dynamicReordering rom =
     {#call unsafe bdd_dynamic_reordering#} bdd_manager
       (case rom of
          ReorderSift          -> bdd_reorder_sift

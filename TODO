@@ -1,11 +1,6 @@
 To do			-*- Outline -*-
 -----
 
-- Dodgy: bvarPair doesn't play nicely in the presence of laziness +
-  other calls to bvar for the same vars. This is all a bit flimsy. It
-  might make sense to add a pre-allocation function in the IO monad or
-  something.
-
 - properly implement substitution/grouping
   - use the BDD's built-in substitution manager for this + ForeignPtrs
     for garbage collection.
@@ -26,7 +21,6 @@ Remove use of newConcForeignPtr, replace with standard FFI op.
 
 * CUDD
 
-FIXME: bvarAdj: add variable blocks
 FIXME verify garbage collection behaviour
 
 * Implementation notes:
