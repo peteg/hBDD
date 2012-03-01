@@ -73,9 +73,6 @@ class Boolean b where
   x `nor` y = neg (x \/ y)
   xor :: b -> b -> b
   x `xor` y = (x \/ y) /\ (neg (x /\ y))
-  -- | If-then-else FIXME
-  -- (?) :: b -> b -> b -> b
-  -- i ? (t, e) = (i /\ t) \/ (neg i /\ e)
   -- | Implication
   (-->) :: b -> b -> b
   x --> y = (neg x) \/ y

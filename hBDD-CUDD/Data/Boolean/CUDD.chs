@@ -39,7 +39,9 @@ import Data.Maybe	( fromJust, isJust )
 import Data.Map         ( Map )
 import qualified Data.Map as Map
 
-import Foreign
+import Foreign		( ForeignPtr, withForeignPtr, newForeignPtr, newForeignPtr_, finalizerFree, touchForeignPtr
+                        , Ptr, advancePtr, castPtr, peek, pokeElemOff, ptrToIntPtr
+                        , mallocArray )
 import Foreign.C
 
 import GHC.ForeignPtr   ( newConcForeignPtr )
@@ -47,6 +49,7 @@ import GHC.ForeignPtr   ( newConcForeignPtr )
 import System.IO	( Handle, hIsReadable, hIsWritable )
 -- import System.Mem	( performGC )
 import System.Posix.IO	( handleToFd )
+import System.IO.Unsafe	( unsafePerformIO )
 
 import Data.Boolean
 
@@ -329,7 +332,7 @@ cudd_rel_product group f g = unsafePerformIO $
 -- | This function swaps variables, as it uses
 -- @cudd_bddSwapVariables@. This is not exactly a "rename" behaviour.
 cudd_rename :: Subst BDD -> BDD -> BDD
-cudd_rename (MkSubst len fpx fpx') f = unsafePerformIO $
+cudd_rename s@(MkSubst len fpx fpx') f = unsafePerformIO $ s `seq` f `seq`
   withBDD f $ \fp ->
     withForeignPtr fpx $ \arrayx -> withForeignPtr fpx' $ \arrayx' ->
       {#call unsafe cudd_bddSwapVariables#} ddmanager fp arrayx arrayx' (fromIntegral len)
