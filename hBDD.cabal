@@ -19,5 +19,7 @@ Extra-Source-Files: AUTHORS INSTALL README TODO
 Library
   Build-depends: base
   extensions: FlexibleInstances TypeFamilies TypeSynonymInstances
-  exposed-modules: Data.Boolean, Data.Boolean.BF, Data.Boolean.Relation
+  exposed-modules:
+     Data.Boolean
+     Data.Boolean.BF
   ghc-options: -Wall

@@ -208,7 +208,9 @@ instance BooleanVariable BDD where
                else putStrLn $ "hBDD-CUDD warning: not grouping variables " ++ show ls
              return vars
       where
+        -- FIXME why one or the other?
         groupVars vid len = makeTreeNode ddmanager vid len (cFromEnum CUDD_MTR_DEFAULT) >> return ()
+        -- groupVars vid len = makeTreeNode ddmanager vid len (cFromEnum CUDD_MTR_FIXED) >> return ()
         makeTreeNode = {#call unsafe Cudd_MakeTreeNode as _cudd_MakeTreeNode#}
 
     unbvar bdd = unsafePerformIO $ bdd `seq`
