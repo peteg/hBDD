@@ -8,3 +8,6 @@ on Debian GNU/Linux x86 for me. Note it does not build a shared
 library and so GHCi does not work.
 
 I use the one from Macports under OS X.
+
+The create-cudd-so.sh script creates a shared library that GHCi can
+use from the CUDD static libraries.

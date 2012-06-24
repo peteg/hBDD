@@ -24,10 +24,9 @@ You may need to use Cabal flags --extra-include-dirs and
 * Documentation
 
 Haddock-generated documentation for the Haskell bindings can be found
-in the 'doc' directory. CMU/Long's manpage - bdd(3) - is also a source
-of valuable information. Also the documentation for CUDD is very
-readable (albeit obscure at times), and the implementation quite
-clean.
+in the 'doc' directory. CMU/Long's manpage - bdd(3) - is a source of
+valuable information. Also the documentation for CUDD is very readable
+(albeit obscure at times), and the implementation is quite clean.
 
 * Copyleft
 
