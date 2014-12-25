@@ -113,7 +113,6 @@ cFromEnum  = fromIntegral . fromEnum
 -- | The abstract type of BDDs.
 {#pointer *DdNode as BDD foreign newtype#}
 
-withBDD :: BDD -> (Ptr BDD -> IO a) -> IO a
 {-# INLINE withBDD #-}
 
 -- BDDs are just pointers, so there's no work to do when we @deepseq@ them.
